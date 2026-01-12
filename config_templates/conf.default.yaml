@@ -69,6 +69,14 @@ character_config:
         use_mcpp: True
         mcp_enabled_servers: ["time", "ddg-search"] # Enabled MCP servers
 
+        # Semantic routing for dynamic tool filtering
+        # When enabled, uses semantic-router to classify user intent and
+        # only provide relevant MCP tools to the LLM, reducing context size
+        use_semantic_routing: False # Set to True to enable
+        semantic_routing_config_path: "config_templates/mcp_routes.yaml"
+        semantic_routing_encoder: "openai" # Options: openai, cohere, huggingface, fastembed
+        semantic_routing_encoder_model: "text-embedding-3-small" # Optional: specific model name
+
       letta_agent:
         host: 'localhost' # Host address
         port: 8283 # Port number

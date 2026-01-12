@@ -1,6 +1,7 @@
 from typing import Union, List, Dict, Any, Optional
 import asyncio
 import json
+import time
 from loguru import logger
 import numpy as np
 
@@ -17,6 +18,7 @@ from .types import WebSocketSend
 from .tts_manager import TTSTaskManager
 from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
+from ..utils.performance_logger import measure_time
 
 # Import necessary types from agent outputs
 from ..agent.output_types import SentenceOutput, AudioOutput
@@ -49,15 +51,19 @@ async def process_single_conversation(
     tts_manager = TTSTaskManager()
     full_response = ""  # Initialize full_response here
 
+    # Overall conversation timing
+    conversation_start = time.perf_counter()
+
     try:
         # Send initial signals
         await send_conversation_start_signals(websocket_send)
         logger.info(f"New Conversation Chain {session_emoji} started!")
 
-        # Process user input
-        input_text = await process_user_input(
-            user_input, context.asr_engine, websocket_send
-        )
+        # Process user input with timing
+        with measure_time("ASR - Process User Input"):
+            input_text = await process_user_input(
+                user_input, context.asr_engine, websocket_send
+            )
 
         # Create batch input
         batch_input = create_batch_input(
@@ -85,11 +91,19 @@ async def process_single_conversation(
         if images:
             logger.info(f"With {len(images)} images")
 
+        # LLM response generation timing
+        llm_start = time.perf_counter()
+        first_token_time = None
+
         try:
             # agent.chat yields Union[SentenceOutput, Dict[str, Any]]
             agent_output_stream = context.agent_engine.chat(batch_input)
 
             async for output_item in agent_output_stream:
+                # Measure time to first token
+                if first_token_time is None:
+                    first_token_time = time.perf_counter() - llm_start
+                    logger.info(f"⚡ Time to first token: {first_token_time:.3f}s")
                 if (
                     isinstance(output_item, dict)
                     and output_item.get("type") == "tool_call_status"
@@ -135,11 +149,16 @@ async def process_single_conversation(
                 )
             )
             # full_response will contain partial response before error
+
+        # Log LLM completion time
+        llm_elapsed = time.perf_counter() - llm_start
+        logger.info(f"✅ LLM - Total Generation Time: {llm_elapsed:.3f}s")
         # --- End processing agent response ---
 
-        # Wait for any pending TTS tasks
+        # Wait for any pending TTS tasks with timing
         if tts_manager.task_list:
-            await asyncio.gather(*tts_manager.task_list)
+            with measure_time("TTS - Generate All Audio"):
+                await asyncio.gather(*tts_manager.task_list)
             await websocket_send(json.dumps({"type": "backend-synth-complete"}))
 
         await finalize_conversation_turn(
@@ -159,6 +178,10 @@ async def process_single_conversation(
             )
             logger.info(f"AI response: {full_response}")
 
+        # Log total conversation time
+        conversation_elapsed = time.perf_counter() - conversation_start
+        logger.info(f"🎯 TOTAL CONVERSATION TIME: {conversation_elapsed:.3f}s")
+
         return full_response  # Return accumulated full_response
 
     except asyncio.CancelledError:
@@ -171,4 +194,7 @@ async def process_single_conversation(
         )
         raise
     finally:
+        # Log final timing even on error
+        conversation_elapsed = time.perf_counter() - conversation_start
+        logger.info(f"📊 Conversation ended after {conversation_elapsed:.3f}s")
         cleanup_conversation(tts_manager, session_emoji)

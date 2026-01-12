@@ -34,6 +34,12 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
 
+    # Semantic routing for dynamic tool filtering
+    use_semantic_routing: Optional[bool] = Field(False, alias="use_semantic_routing")
+    semantic_routing_config_path: Optional[str] = Field("config_templates/mcp_routes.yaml", alias="semantic_routing_config_path")
+    semantic_routing_encoder: Optional[str] = Field("openai", alias="semantic_routing_encoder")
+    semantic_routing_encoder_model: Optional[str] = Field(None, alias="semantic_routing_encoder_model")
+
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "llm_provider": Description(
             en="LLM provider to use for this agent",
@@ -54,6 +60,22 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "mcp_enabled_servers": Description(
             en="List of MCP servers to enable for the agent",
             zh="为智能体启用 MCP 服务器列表",
+        ),
+        "use_semantic_routing": Description(
+            en="Whether to use semantic routing to dynamically filter MCP tools based on user intent (default: False)",
+            zh="是否使用语义路由根据用户意图动态过滤 MCP 工具（默认：False）",
+        ),
+        "semantic_routing_config_path": Description(
+            en="Path to the semantic routing configuration YAML file (default: config_templates/mcp_routes.yaml)",
+            zh="语义路由配置 YAML 文件路径（默认：config_templates/mcp_routes.yaml）",
+        ),
+        "semantic_routing_encoder": Description(
+            en="Encoder type for semantic routing: 'openai', 'cohere', 'huggingface', or 'fastembed' (default: openai)",
+            zh="语义路由编码器类型：'openai'、'cohere'、'huggingface' 或 'fastembed'（默认：openai）",
+        ),
+        "semantic_routing_encoder_model": Description(
+            en="Optional model name for the semantic routing encoder",
+            zh="语义路由编码器的可选模型名称",
         ),
     }
 

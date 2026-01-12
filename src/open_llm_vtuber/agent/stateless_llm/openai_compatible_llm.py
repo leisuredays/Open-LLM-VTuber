@@ -3,6 +3,7 @@ This class is responsible for handling asynchronous interaction with OpenAI API 
 endpoints for language generation.
 """
 
+import time
 from typing import AsyncIterator, List, Dict, Any
 from openai import (
     AsyncStream,
@@ -88,6 +89,11 @@ class AsyncLLM(StatelessLLMInterface):
         accumulated_tool_calls = {}
         in_tool_call = False
 
+        # Performance timing
+        api_call_start = time.perf_counter()
+        first_chunk_time = None
+        chunk_count = 0
+
         try:
             # If system prompt is provided, add it to the messages
             messages_with_system = messages
@@ -100,6 +106,7 @@ class AsyncLLM(StatelessLLMInterface):
 
             available_tools = tools if self.support_tools else NOT_GIVEN
 
+            logger.debug(f"⏱️  [LLM API] Sending request to {self.model}")
             stream: AsyncStream[
                 ChatCompletionChunk
             ] = await self.client.chat.completions.create(
@@ -114,6 +121,11 @@ class AsyncLLM(StatelessLLMInterface):
             )
 
             async for chunk in stream:
+                # Log time to first chunk
+                if first_chunk_time is None:
+                    first_chunk_time = time.perf_counter() - api_call_start
+                    logger.debug(f"⚡ [LLM API] Time to first chunk: {first_chunk_time:.3f}s")
+                chunk_count += 1
                 # Guard against chunks with missing choices field (e.g., from OpenWebUI)
                 if not chunk.choices:
                     continue
@@ -235,6 +247,7 @@ class AsyncLLM(StatelessLLMInterface):
             # make sure the stream is properly closed
             # so when interrupted, no more tokens will being generated.
             if stream:
-                logger.debug("Chat completion finished.")
+                total_time = time.perf_counter() - api_call_start
+                logger.debug(f"✅ [LLM API] Chat completion finished in {total_time:.3f}s ({chunk_count} chunks)")
                 await stream.close()
                 logger.debug("Stream closed.")

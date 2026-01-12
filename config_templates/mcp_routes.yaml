@@ -1,0 +1,173 @@
+# MCP Tool Routing Configuration
+# Uses semantic-router to classify user intent and dynamically filter MCP tools
+
+routes:
+  # Time-related queries
+  - name: "time_related"
+    description: "시간, 날짜, 타임존 관련 질문"
+    utterances:
+      - "what time is it"
+      - "what's the date today"
+      - "what day is it"
+      - "current time please"
+      - "tell me the time"
+      - "what's today's date"
+      - "지금 몇 시야"
+      - "오늘 날짜가 뭐야"
+      - "현재 시각 알려줘"
+      - "몇 시예요"
+      - "오늘 며칠이야"
+    mcp_servers:
+      - "time"
+
+  # Web search queries
+  - name: "search_web"
+    description: "웹 검색, 최신 정보, 뉴스 검색"
+    utterances:
+      - "search for"
+      - "look up"
+      - "find information about"
+      - "what's the latest news"
+      - "search the web for"
+      - "google this"
+      - "find me information on"
+      - "검색해줘"
+      - "찾아줘"
+      - "최신 뉴스"
+      - "정보 찾아줘"
+      - "웹에서 검색"
+    mcp_servers:
+      - "ddg-search"
+
+  # Code analysis and symbol search
+  - name: "code_analysis"
+    description: "코드 분석, 파일 읽기, 심볼 검색, 함수/클래스 찾기"
+    utterances:
+      - "analyze this code"
+      - "read the file"
+      - "find the function"
+      - "what does this class do"
+      - "show me the implementation"
+      - "find references to"
+      - "search for symbols"
+      - "코드 분석해줘"
+      - "파일 읽어줘"
+      - "함수 찾아줘"
+      - "클래스 보여줘"
+      - "구현 찾아줘"
+      - "심볼 검색"
+    mcp_servers:
+      - "serena"
+
+  # Filesystem operations
+  - name: "filesystem_operations"
+    description: "파일 시스템 작업 (읽기, 쓰기, 검색, 디렉토리)"
+    utterances:
+      - "read the file"
+      - "write to file"
+      - "list directory"
+      - "find files matching"
+      - "create a directory"
+      - "delete this file"
+      - "show me the contents of"
+      - "파일 읽어줘"
+      - "파일 써줘"
+      - "디렉토리 보여줘"
+      - "파일 찾아줘"
+      - "폴더 만들어줘"
+      - "파일 내용 보여줘"
+    mcp_servers:
+      - "filesystem"
+
+  # General conversation (no tools needed)
+  - name: "general_conversation"
+    description: "일반 대화 (툴 불필요)"
+    utterances:
+      - "hello"
+      - "hi"
+      - "how are you"
+      - "tell me a joke"
+      - "thank you"
+      - "goodbye"
+      - "good morning"
+      - "nice to meet you"
+      - "안녕"
+      - "안녕하세요"
+      - "고마워"
+      - "감사합니다"
+      - "잘 지내?"
+      - "좋은 아침"
+      - "반가워"
+    mcp_servers: []  # No tools needed
+
+  # Browser/web interaction
+  - name: "browser_interaction"
+    description: "브라우저 자동화, 웹페이지 탐색"
+    utterances:
+      - "open this website"
+      - "click on the button"
+      - "navigate to"
+      - "take a screenshot"
+      - "fill this form"
+      - "웹사이트 열어줘"
+      - "버튼 클릭해줘"
+      - "스크린샷 찍어줘"
+      - "폼 작성해줘"
+    mcp_servers:
+      - "playwright"
+
+  # IDE/editor operations
+  - name: "ide_operations"
+    description: "IDE/에디터 작업 (진단, 코드 실행)"
+    utterances:
+      - "run this code"
+      - "execute the notebook"
+      - "show me the diagnostics"
+      - "check for errors"
+      - "코드 실행해줘"
+      - "노트북 실행"
+      - "오류 확인"
+      - "진단 보여줘"
+    mcp_servers:
+      - "ide"
+
+  # System command execution
+  - name: "system_commands"
+    description: "시스템 명령 실행, 프로세스 관리, 리소스 확인"
+    utterances:
+      - "run command"
+      - "execute on system"
+      - "check nvidia"
+      - "nvidia-smi"
+      - "system resources"
+      - "start process"
+      - "kill process"
+      - "check gpu"
+      - "system status"
+      - "명령 실행"
+      - "로컬에서 실행"
+      - "시스템 확인"
+      - "프로세스 실행"
+      - "프로세스 종료"
+      - "GPU 확인"
+      - "시스템 상태"
+      - "실행해봐"
+    mcp_servers:
+      - "desktop-commander"
+
+# Fallback behavior when no route matches
+fallback:
+  mode: "most_common"  # Options: "all_tools", "no_tools", "most_common"
+  most_common_servers: ["filesystem", "serena"]  # Default servers when no match
+
+# Encoder configuration
+encoder:
+  type: "openai"  # Options: "openai", "cohere", "huggingface", "fastembed"
+  model: "text-embedding-3-small"  # OpenAI model name
+  # API key will be read from environment variable: OPENAI_API_KEY
+
+# Routing settings
+routing:
+  score_threshold: 0.5  # Minimum similarity score to match a route
+  top_k: 2  # Maximum number of routes to match
+  aggregate_multiple: true  # Combine tools from multiple matched routes

@@ -35,6 +35,12 @@ class BasicMemoryAgent(AgentInterface):
 
     _system: str = "You are a helpful assistant."
 
+    # Instruction prepended to tool results to encourage concise responses
+    TOOL_RESULT_CONCISE_PREFIX: str = (
+        "[Instruction: Provide a brief answer (1-2 sentences) based on these tool results. "
+        "Skip suggestions unless requested.]\n\n"
+    )
+
     def __init__(
         self,
         llm: StatelessLLMInterface,
@@ -49,6 +55,7 @@ class BasicMemoryAgent(AgentInterface):
         tool_manager: Optional[ToolManager] = None,
         tool_executor: Optional[ToolExecutor] = None,
         mcp_prompt_string: str = "",
+        semantic_router=None,  # Optional[SemanticToolRouter]
     ):
         """Initialize agent with LLM and configuration."""
         super().__init__()
@@ -67,6 +74,7 @@ class BasicMemoryAgent(AgentInterface):
         self._tool_executor = tool_executor
         self._mcp_prompt_string = mcp_prompt_string
         self._json_detector = StreamJSONDetector()
+        self._semantic_router = semantic_router
 
         self._formatted_tools_openai = []
         self._formatted_tools_claude = []
@@ -109,7 +117,10 @@ class BasicMemoryAgent(AgentInterface):
                 "use_mcpp is False, but some MCP components were passed to the agent."
             )
 
-        logger.info("BasicMemoryAgent initialized.")
+        if self._semantic_router:
+            logger.info("BasicMemoryAgent initialized with semantic routing enabled for dynamic tool filtering.")
+        else:
+            logger.info("BasicMemoryAgent initialized.")
 
     def _set_llm(self, llm: StatelessLLMInterface):
         """Set the LLM for chat completion."""
@@ -391,6 +402,11 @@ class BasicMemoryAgent(AgentInterface):
                     )
 
                 if tool_results_for_llm:
+                    # Prepend concise instruction to first tool result
+                    if isinstance(tool_results_for_llm, list) and tool_results_for_llm:
+                        first_result = tool_results_for_llm[0]
+                        if isinstance(first_result, dict) and "content" in first_result:
+                            first_result["content"] = self.TOOL_RESULT_CONCISE_PREFIX + first_result["content"]
                     messages.append({"role": "user", "content": tool_results_for_llm})
 
                 # stop_reason = None
@@ -534,6 +550,8 @@ class BasicMemoryAgent(AgentInterface):
                             for res in tool_results_for_llm
                         ]
                         combined_results_str = "\n".join(result_strings)
+                        # Prepend concise instruction to combined results
+                        combined_results_str = self.TOOL_RESULT_CONCISE_PREFIX + combined_results_str
                         messages.append(
                             {"role": "user", "content": combined_results_str}
                         )
@@ -570,6 +588,11 @@ class BasicMemoryAgent(AgentInterface):
                     )
 
                 if tool_results_for_llm:
+                    # Prepend concise instruction to first tool result
+                    if isinstance(tool_results_for_llm, list) and tool_results_for_llm:
+                        first_result = tool_results_for_llm[0]
+                        if isinstance(first_result, dict) and "content" in first_result:
+                            first_result["content"] = self.TOOL_RESULT_CONCISE_PREFIX + first_result["content"]
                     messages.extend(tool_results_for_llm)
                 continue
 
@@ -604,19 +627,53 @@ class BasicMemoryAgent(AgentInterface):
             llm_supports_native_tools = False
 
             if self._use_mcpp and self._tool_manager:
-                tools = None
+                # Determine API format based on LLM type
                 if isinstance(self._llm, ClaudeAsyncLLM):
                     tool_mode = "Claude"
-                    tools = self._formatted_tools_claude
                     llm_supports_native_tools = True
                 elif isinstance(self._llm, OpenAICompatibleAsyncLLM):
                     tool_mode = "OpenAI"
-                    tools = self._formatted_tools_openai
                     llm_supports_native_tools = True
                 else:
                     logger.warning(
                         f"LLM type {type(self._llm)} not explicitly handled for tool mode determination."
                     )
+
+                # Dynamic tool filtering with semantic routing
+                if self._semantic_router and tool_mode:
+                    try:
+                        # Get user message for intent classification
+                        # Handle both string and list (multimodal) content formats
+                        user_message = ""
+                        if messages:
+                            content = messages[-1].get("content", "")
+                            if isinstance(content, str):
+                                user_message = content
+                            elif isinstance(content, list):
+                                # Extract text from multimodal content format
+                                for item in content:
+                                    if isinstance(item, dict) and item.get("type") == "text":
+                                        user_message = item.get("text", "")
+                                        break
+
+                        if user_message:
+                            # Filter tools based on user intent
+                            tools = self._semantic_router.filter_tools(
+                                user_message=user_message,
+                                tool_manager=self._tool_manager,
+                                api_format=tool_mode
+                            )
+                            logger.info(f"BMA: Using {len(tools)} filtered tools via semantic routing (mode: {tool_mode})")
+                        else:
+                            logger.warning("BMA: No user message found for semantic routing, using all tools")
+                            tools = self._formatted_tools_claude if tool_mode == "Claude" else self._formatted_tools_openai
+                    except Exception as e:
+                        logger.error(f"BMA: Semantic routing failed: {e}, falling back to all tools")
+                        tools = self._formatted_tools_claude if tool_mode == "Claude" else self._formatted_tools_openai
+                else:
+                    # Standard - use all tools
+                    tools = self._formatted_tools_claude if tool_mode == "Claude" else self._formatted_tools_openai
+                    logger.debug(f"BMA: Using all {len(tools) if tools else 0} tools (mode: {tool_mode})")
 
                 if llm_supports_native_tools and not tools:
                     logger.warning(

@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import sherpa_onnx
 from loguru import logger
@@ -199,7 +200,19 @@ class VoiceRecognition(ASRInterface):
         return recognizer
 
     def transcribe_np(self, audio: np.ndarray) -> str:
+        start_time = time.perf_counter()
+        audio_duration = len(audio) / self.SAMPLE_RATE
+
         stream = self.recognizer.create_stream()
         stream.accept_waveform(self.SAMPLE_RATE, audio)
         self.recognizer.decode_streams([stream])
-        return stream.result.text
+        result = stream.result.text
+
+        elapsed = time.perf_counter() - start_time
+        rtf = elapsed / audio_duration if audio_duration > 0 else 0
+        logger.debug(
+            f"✅ [ASR] Transcribed {audio_duration:.2f}s audio in {elapsed:.3f}s "
+            f"(RTF: {rtf:.2f}x, Text: '{result[:50]}...')"
+        )
+
+        return result

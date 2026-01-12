@@ -1,5 +1,6 @@
 # src/open_llm_vtuber/tts/elevenlabs_tts.py
 import os
+import time
 from pathlib import Path
 
 from loguru import logger
@@ -89,6 +90,9 @@ class TTSEngine(TTSInterface):
         speech_file_path = Path(file_name)
 
         try:
+            start_time = time.perf_counter()
+            text_length = len(text)
+
             logger.debug(
                 f"Generating audio via ElevenLabs for text: '{text[:50]}...' with voice '{self.voice_id}' model '{self.model_id}'"
             )
@@ -112,8 +116,10 @@ class TTSEngine(TTSInterface):
                 for chunk in audio:
                     f.write(chunk)
 
+            elapsed = time.perf_counter() - start_time
             logger.info(
-                f"Successfully generated audio file via ElevenLabs: {speech_file_path}"
+                f"✅ [TTS] Generated audio in {elapsed:.3f}s for {text_length} chars "
+                f"(~{text_length/elapsed:.0f} chars/s): {speech_file_path}"
             )
 
         except Exception as e:

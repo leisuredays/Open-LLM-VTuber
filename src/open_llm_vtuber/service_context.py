@@ -92,10 +92,19 @@ class ServiceContext:
 
     # ==== Initializers
 
-    async def _init_mcp_components(self, use_mcpp, enabled_servers):
+    async def _init_mcp_components(
+        self,
+        use_mcpp,
+        enabled_servers,
+        use_semantic_routing=False,
+        semantic_routing_config_path=None,
+        semantic_routing_encoder="openai",
+        semantic_routing_encoder_model=None,
+    ):
         """Initializes MCP components based on configuration, dynamically fetching tool info."""
         logger.debug(
-            f"Initializing MCP components: use_mcpp={use_mcpp}, enabled_servers={enabled_servers}"
+            f"Initializing MCP components: use_mcpp={use_mcpp}, enabled_servers={enabled_servers}, "
+            f"use_semantic_routing={use_semantic_routing}"
         )
 
         # Reset MCP components first
@@ -105,6 +114,7 @@ class ServiceContext:
         self.tool_executor = None
         self.json_detector = None
         self.mcp_prompt = ""
+        self.semantic_router = None
 
         if use_mcpp and enabled_servers:
             # 1. Initialize ServerRegistry
@@ -176,6 +186,25 @@ class ServiceContext:
                 )
                 self.tool_executor = None  # Ensure it's None
 
+            # 6. Initialize SemanticToolRouter if enabled
+            if use_semantic_routing and self.tool_manager:
+                try:
+                    from src.open_llm_vtuber.mcpp.semantic_tool_router import SemanticToolRouter
+
+                    self.semantic_router = SemanticToolRouter(
+                        route_config_path=semantic_routing_config_path or "config_templates/mcp_routes.yaml",
+                        encoder_type=semantic_routing_encoder,
+                        encoder_model=semantic_routing_encoder_model,
+                    )
+                    logger.info("SemanticToolRouter initialized for dynamic tool filtering.")
+                except Exception as e:
+                    logger.error(f"Failed to initialize SemanticToolRouter: {e}", exc_info=True)
+                    logger.info("Falling back to standard tool provisioning (all tools).")
+                    self.semantic_router = None
+            elif use_semantic_routing and not self.tool_manager:
+                logger.warning("Semantic routing enabled but ToolManager not available.")
+                self.semantic_router = None
+
             logger.info("StreamJSONDetector initialized for this session.")
 
         elif use_mcpp and not enabled_servers:
@@ -239,9 +268,14 @@ class ServiceContext:
         self.client_uid = client_uid
 
         # Initialize session-specific MCP components
+        agent_settings = self.character_config.agent_config.agent_settings.basic_memory_agent
         await self._init_mcp_components(
-            self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
-            self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
+            agent_settings.use_mcpp,
+            agent_settings.mcp_enabled_servers,
+            use_semantic_routing=getattr(agent_settings, 'use_semantic_routing', False),
+            semantic_routing_config_path=getattr(agent_settings, 'semantic_routing_config_path', None),
+            semantic_routing_encoder=getattr(agent_settings, 'semantic_routing_encoder', 'openai'),
+            semantic_routing_encoder_model=getattr(agent_settings, 'semantic_routing_encoder_model', None),
         )
 
         logger.debug(f"Loaded service context with cache: {character_config}")
@@ -291,9 +325,14 @@ class ServiceContext:
             self.tool_adapter = ToolAdapter(server_registery=self.mcp_server_registery)
 
         # Initialize MCP Components before initializing Agent
+        agent_settings = config.character_config.agent_config.agent_settings.basic_memory_agent
         await self._init_mcp_components(
-            config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
-            config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
+            agent_settings.use_mcpp,
+            agent_settings.mcp_enabled_servers,
+            use_semantic_routing=getattr(agent_settings, 'use_semantic_routing', False),
+            semantic_routing_config_path=getattr(agent_settings, 'semantic_routing_config_path', None),
+            semantic_routing_encoder=getattr(agent_settings, 'semantic_routing_encoder', 'openai'),
+            semantic_routing_encoder_model=getattr(agent_settings, 'semantic_routing_encoder_model', None),
         )
 
         # init agent from character config
@@ -391,6 +430,7 @@ class ServiceContext:
                 tool_manager=self.tool_manager,
                 tool_executor=self.tool_executor,
                 mcp_prompt_string=self.mcp_prompt,
+                semantic_router=self.semantic_router,  # Pass semantic router to agent
             )
 
             logger.debug(f"Agent choice: {agent_config.conversation_agent_choice}")
