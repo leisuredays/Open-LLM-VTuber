@@ -76,3 +76,6 @@ private/
 mcp_servers.json
 
 .vscode/
+
+# Serena MCP memories
+.serena/memories/

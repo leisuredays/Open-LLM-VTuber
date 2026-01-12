@@ -1,0 +1,28 @@
+languages:
+- python
+
+encoding: "utf-8"
+
+ignore_all_files_in_gitignore: true
+
+ignored_paths:
+- node_modules
+- __pycache__
+- .venv
+- venv
+- "*.pyc"
+- dist
+- build
+- cache
+- chat_history
+- live2d-models
+- "*.onnx"
+- "*.pt"
+- "*.pth"
+
+read_only: false
+excluded_tools: []
+initial_prompt: ""
+project_name: "Open-LLM-VTuber"
+included_optional_tools: []
+fixed_tools: []

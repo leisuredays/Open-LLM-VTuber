@@ -93,6 +93,7 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
         project_id: str = "z",
         template: str = "CHATML",
         temperature: float = 1.0,
+        max_tokens: int = None,
     ):
         """
         Initializes an instance of the `AsyncLLM` class.
@@ -105,17 +106,19 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
         - llm_api_key (str, optional): The API key for the OpenAI API. Defaults to "z".
         - template (str, optional): The Jinja template to use. Defaults to "LLAMA3".
         - temperature (float, optional): What sampling temperature to use, between 0 and 2. Defaults to 1.0.
+        - max_tokens (int, optional): Maximum number of tokens to generate. Defaults to None (unlimited).
         """
         self.completion_url = base_url
         self.model = model
         self.temperature = temperature
+        self.max_tokens = max_tokens
         self.template = Template(TEMPLATES[template]["template"])
         self.eot_token = TEMPLATES[template]["eot_token"]
         self.prompt_headers = {
             "Authorization": llm_api_key or "Bearer your_api_key_here"
         }
         logger.info(
-            f"Initialized AsyncLLM with the parameters: {self.completion_url} ({template})"
+            f"Initialized AsyncLLM with the parameters: {self.completion_url} ({template}), max_tokens={self.max_tokens}"
         )
 
     async def chat_completion(

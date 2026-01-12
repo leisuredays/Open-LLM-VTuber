@@ -64,20 +64,25 @@ class OpenAICompatibleConfig(StatelessLLMBaseConfig):
     organization_id: str | None = Field(None, alias="organization_id")
     project_id: str | None = Field(None, alias="project_id")
     temperature: float = Field(1.0, alias="temperature")
+    max_tokens: int | None = Field(None, alias="max_tokens")
 
     _OPENAI_COMPATIBLE_DESCRIPTIONS: ClassVar[dict[str, Description]] = {
-        "base_url": Description(en="Base URL for the API endpoint", zh="API的URL端点"),
-        "llm_api_key": Description(en="API key for authentication", zh="API 认证密钥"),
+        "base_url": Description(en="Base URL for the API endpoint", zh="API의 URL 엔드포인트"),
+        "llm_api_key": Description(en="API key for authentication", zh="API 인증 키"),
         "organization_id": Description(
-            en="Organization ID for the API (Optional)", zh="组织 ID (可选)"
+            en="Organization ID for the API (Optional)", zh="조직 ID (선택 사항)"
         ),
         "project_id": Description(
-            en="Project ID for the API (Optional)", zh="项目 ID (可选)"
+            en="Project ID for the API (Optional)", zh="프로젝트 ID (선택 사항)"
         ),
-        "model": Description(en="Name of the LLM model to use", zh="LLM 模型名称"),
+        "model": Description(en="Name of the LLM model to use", zh="LLM 모델 이름"),
         "temperature": Description(
             en="What sampling temperature to use, between 0 and 2.",
-            zh="使用的采样温度，介于 0 和 2 之间。",
+            zh="사용할 샘플링 온도, 0에서 2 사이.",
+        ),
+        "max_tokens": Description(
+            en="Maximum number of tokens to generate in the response (Optional). If not set, the model will generate as many tokens as it wants.",
+            zh="응답에서 생성할 최대 토큰 수 (선택 사항). 설정하지 않으면 모델이 원하는 만큼 생성합니다.",
         ),
     }
 
