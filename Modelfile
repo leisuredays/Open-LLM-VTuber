@@ -1,0 +1,2 @@
+FROM benedict/linkbricks-llama3.1-korean:8b
+PARAMETER num_ctx 16384
