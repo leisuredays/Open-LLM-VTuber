@@ -20,10 +20,6 @@ class TTSTaskManager:
     def __init__(self) -> None:
         self.task_list: List[asyncio.Task] = []
         self._lock = asyncio.Lock()
-        # Queue to store payloads for immediate transmission
-        self._payload_queue: asyncio.Queue[Dict] = asyncio.Queue()
-        # Task to handle sending payloads
-        self._sender_task: Optional[asyncio.Task] = None
         # Counter for sequence numbering
         self._sequence_counter = 0
 
@@ -53,13 +49,7 @@ class TTSTaskManager:
             current_sequence = self._sequence_counter
             self._sequence_counter += 1
 
-            # Start sender task if not running
-            if not self._sender_task or self._sender_task.done():
-                self._sender_task = asyncio.create_task(
-                    self._process_payload_queue(websocket_send)
-                )
-
-            await self._send_silent_payload(display_text, actions, current_sequence)
+            await self._send_silent_payload(display_text, actions, websocket_send, current_sequence)
             return
 
         logger.debug(
@@ -69,12 +59,6 @@ class TTSTaskManager:
         # Get current sequence number
         current_sequence = self._sequence_counter
         self._sequence_counter += 1
-
-        # Start sender task if not running
-        if not self._sender_task or self._sender_task.done():
-            self._sender_task = asyncio.create_task(
-                self._process_payload_queue(websocket_send)
-            )
 
         # Check if TTS engine supports streaming
         supports_streaming = hasattr(tts_engine, 'stream_audio') and callable(getattr(tts_engine, 'stream_audio'))
@@ -88,6 +72,7 @@ class TTSTaskManager:
                     actions=actions,
                     live2d_model=live2d_model,
                     tts_engine=tts_engine,
+                    websocket_send=websocket_send,
                     sequence_number=current_sequence,
                 )
             )
@@ -99,55 +84,27 @@ class TTSTaskManager:
                     actions=actions,
                     live2d_model=live2d_model,
                     tts_engine=tts_engine,
+                    websocket_send=websocket_send,
                     sequence_number=current_sequence,
                 )
             )
         self.task_list.append(task)
 
-    async def _process_payload_queue(self, websocket_send: WebSocketSend) -> None:
-        """
-        Send audio payloads to frontend immediately as they're generated.
-
-        NO buffering, NO ordering - just send chunks as fast as they're ready!
-        Frontend is responsible for ordering and playback sequencing.
-        """
-        while True:
-            try:
-                # Get payload from queue and send IMMEDIATELY
-                payload, sequence_number = await self._payload_queue.get()
-                await websocket_send(json.dumps(payload))
-
-                # Log what was sent
-                payload_type = payload.get("type")
-                if payload_type == "audio-start":
-                    logger.debug(f"📤 [WebSocket] Sent audio-start for sequence {sequence_number}")
-                elif payload_type == "audio-chunk":
-                    chunk_idx = payload.get("chunk_index")
-                    if chunk_idx == 0 or chunk_idx % 10 == 0:  # Log first chunk and every 10th
-                        logger.debug(f"📤 [WebSocket] Sent audio-chunk {chunk_idx} for sequence {sequence_number}")
-                elif payload_type == "audio-complete":
-                    logger.info(f"📤 [WebSocket] Sent audio-complete for sequence {sequence_number}")
-                elif payload_type == "audio":
-                    logger.debug(f"📤 [WebSocket] Sent traditional audio for sequence {sequence_number}")
-
-                self._payload_queue.task_done()
-
-            except asyncio.CancelledError:
-                break
-
     async def _send_silent_payload(
         self,
         display_text: DisplayText,
         actions: Optional[Actions],
+        websocket_send: WebSocketSend,
         sequence_number: int,
     ) -> None:
-        """Queue a silent audio payload"""
+        """Send a silent audio payload directly"""
         audio_payload = prepare_audio_payload(
             audio_path=None,
             display_text=display_text,
             actions=actions,
         )
-        await self._payload_queue.put((audio_payload, sequence_number))
+        await websocket_send(json.dumps(audio_payload))
+        logger.debug(f"📤 [WebSocket] Sent silent audio for sequence {sequence_number}")
 
     async def _process_tts(
         self,
@@ -156,9 +113,10 @@ class TTSTaskManager:
         actions: Optional[Actions],
         live2d_model: Live2dModel,
         tts_engine: TTSInterface,
+        websocket_send: WebSocketSend,
         sequence_number: int,
     ) -> None:
-        """Process TTS generation and queue the result for ordered delivery"""
+        """Process TTS generation and send result directly to frontend"""
         audio_file_path = None
         try:
             audio_file_path = await self._generate_audio(tts_engine, tts_text)
@@ -168,18 +126,20 @@ class TTSTaskManager:
                 display_text=display_text,
                 actions=actions,
             )
-            # Queue the payload with its sequence number
-            await self._payload_queue.put((payload, sequence_number))
+            # Send directly to frontend
+            await websocket_send(json.dumps(payload))
+            logger.debug(f"📤 [WebSocket] Sent traditional audio for sequence {sequence_number}")
 
         except Exception as e:
             logger.error(f"Error preparing audio payload: {e}")
-            # Queue silent payload for error case
+            # Send silent payload for error case
             payload = prepare_audio_payload(
                 audio_path=None,
                 display_text=display_text,
                 actions=actions,
             )
-            await self._payload_queue.put((payload, sequence_number))
+            await websocket_send(json.dumps(payload))
+            logger.debug(f"📤 [WebSocket] Sent error fallback for sequence {sequence_number}")
 
         finally:
             if audio_file_path:
@@ -203,9 +163,10 @@ class TTSTaskManager:
         actions: Optional[Actions],
         live2d_model: Live2dModel,
         tts_engine: TTSInterface,
+        websocket_send: WebSocketSend,
         sequence_number: int,
     ) -> None:
-        """Process TTS generation with real-time streaming and queue chunks for ordered delivery"""
+        """Process TTS generation with real-time streaming - send chunks IMMEDIATELY to frontend"""
         try:
             logger.debug(f"🎵 [Streaming] Starting streaming TTS for: '{tts_text[:50]}...'")
 
@@ -217,8 +178,8 @@ class TTSTaskManager:
                 "actions": actions.to_dict() if actions else None,
                 "slice_length": 20,  # 20ms chunks for lip sync
             }
-            await self._payload_queue.put((start_payload, sequence_number))
-            logger.debug(f"🎵 [Streaming] Sent audio-start for sequence {sequence_number}")
+            await websocket_send(json.dumps(start_payload))
+            logger.debug(f"📤 [WebSocket] Sent audio-start for sequence {sequence_number}")
 
             # Stream audio chunks
             chunk_index = 0
@@ -232,10 +193,12 @@ class TTSTaskManager:
                         "audio": chunk_base64,
                         "is_header": (chunk_index == 0),  # First chunk is WAV header
                     }
-                    await self._payload_queue.put((chunk_payload, sequence_number))
+                    await websocket_send(json.dumps(chunk_payload))
 
                     if chunk_index == 0:
-                        logger.info(f"🎵 [Streaming] Sent WAV header chunk ({len(audio_chunk)} bytes)")
+                        logger.info(f"📤 [WebSocket] Sent WAV header chunk (seq {sequence_number}, {len(audio_chunk)} bytes)")
+                    elif chunk_index % 10 == 0:
+                        logger.debug(f"📤 [WebSocket] Sent audio-chunk {chunk_index} for sequence {sequence_number}")
 
                     chunk_index += 1
 
@@ -250,7 +213,8 @@ class TTSTaskManager:
                     display_text=display_text,
                     actions=actions,
                 )
-                await self._payload_queue.put((payload, sequence_number))
+                await websocket_send(json.dumps(payload))
+                logger.debug(f"📤 [WebSocket] Sent traditional audio for sequence {sequence_number}")
                 tts_engine.remove_file(audio_file_path)
                 return
 
@@ -260,24 +224,21 @@ class TTSTaskManager:
                 "sequence": sequence_number,
                 "total_chunks": chunk_index,
             }
-            await self._payload_queue.put((complete_payload, sequence_number))
-            logger.debug(f"🎵 [Streaming] Sent audio-complete for sequence {sequence_number}")
+            await websocket_send(json.dumps(complete_payload))
+            logger.info(f"📤 [WebSocket] Sent audio-complete for sequence {sequence_number}")
 
         except Exception as e:
             logger.error(f"Error in streaming TTS: {e}")
-            # Queue silent payload for error case
+            # Send silent payload for error case
             payload = prepare_audio_payload(
                 audio_path=None,
                 display_text=display_text,
                 actions=actions,
             )
-            await self._payload_queue.put((payload, sequence_number))
+            await websocket_send(json.dumps(payload))
+            logger.debug(f"📤 [WebSocket] Sent error fallback for sequence {sequence_number}")
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""
         self.task_list.clear()
-        if self._sender_task:
-            self._sender_task.cancel()
         self._sequence_counter = 0
-        # Create a new queue to clear any pending items
-        self._payload_queue = asyncio.Queue()
