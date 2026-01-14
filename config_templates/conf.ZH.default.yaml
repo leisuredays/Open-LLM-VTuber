@@ -349,16 +349,16 @@ character_config:
       language: 'en' # 语言
 
     gpt_sovits_tts:
-      # 将参考音频放到 GPT-Sovits 的根路径，或在此处设置路径
+      # 참조 오디오를 GPT-Sovits 루트 경로에 배치하거나 여기에 경로 설정
       api_url: 'http://127.0.0.1:9880/tts' # API URL
-      text_lang: 'zh' # 文本语言
-      ref_audio_path: '' # str.(必需) 参考音频的路径
-      prompt_lang: 'zh' # str.(必需) 参考音频提示文本的语言
-      prompt_text: '' # str.(可选) 参考音频的提示文本
-      text_split_method: 'cut5' # 文本分割方法
-      batch_size: '1' # 批处理大小
-      media_type: 'wav' # 媒体类型
-      streaming_mode: 2  # 流式模式：0=禁用，1=最佳质量，2=中等质量（推荐），3=更快/较低质量
+      text_lang: 'zh' # 텍스트 언어
+      ref_audio_path: '' # str.(필수) 참조 오디오 경로
+      prompt_lang: 'zh' # str.(필수) 참조 오디오 프롬프트 텍스트 언어
+      prompt_text: '' # str.(선택) 참조 오디오 프롬프트 텍스트
+      text_split_method: 'cut5' # 텍스트 분할 방법
+      batch_size: '1' # 배치 크기
+      media_type: 'wav' # 미디어 타입
+      streaming_mode: 2  # 스트리밍 모드: 0=비활성화, 1=최고 품질, 2=중간 품질(권장), 3=빠름/낮은 품질
 
     fish_api_tts:
       # Fish TTS API 的 API 密钥。
