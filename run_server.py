@@ -161,7 +161,7 @@ def run(console_log_level: str):
         app=server.app,
         host=server_config.host,
         port=server_config.port,
-        log_level=console_log_level.lower(),
+        log_level="info",  # Always use "info" for uvicorn to avoid WebSocket spam
     )
 
 
