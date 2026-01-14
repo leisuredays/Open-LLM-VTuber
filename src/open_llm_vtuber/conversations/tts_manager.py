@@ -130,8 +130,22 @@ class TTSTaskManager:
 
                     # Send only NEW payloads (not already sent)
                     for i in range(sent_count, len(sequence_payloads)):
-                        await websocket_send(json.dumps(sequence_payloads[i]))
+                        payload = sequence_payloads[i]
+                        await websocket_send(json.dumps(payload))
                         sent_counts[self._next_sequence_to_send] += 1
+
+                        # Log payload type being sent
+                        payload_type = payload.get("type")
+                        if payload_type == "audio-start":
+                            logger.debug(f"📤 [WebSocket] Sent audio-start for sequence {self._next_sequence_to_send}")
+                        elif payload_type == "audio-chunk":
+                            chunk_idx = payload.get("chunk_index")
+                            if chunk_idx == 0 or chunk_idx % 10 == 0:  # Log first chunk and every 10th
+                                logger.debug(f"📤 [WebSocket] Sent audio-chunk {chunk_idx} for sequence {self._next_sequence_to_send}")
+                        elif payload_type == "audio-complete":
+                            logger.info(f"📤 [WebSocket] Sent audio-complete for sequence {self._next_sequence_to_send}")
+                        elif payload_type == "audio":
+                            logger.debug(f"📤 [WebSocket] Sent traditional audio for sequence {self._next_sequence_to_send}")
 
                     # Check if sequence is complete
                     last_payload = sequence_payloads[-1]
