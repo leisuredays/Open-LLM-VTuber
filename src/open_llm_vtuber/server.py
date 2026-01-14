@@ -142,11 +142,12 @@ class WebSocketServer:
         )
 
         # Mount main frontend last (as catch-all)
-        self.app.mount(
-            "/",
-            CORSStaticFiles(directory="frontend", html=True),
-            name="frontend",
-        )
+        # DISABLED: Frontend serving disabled for separate frontend development
+        # self.app.mount(
+        #     "/",
+        #     CORSStaticFiles(directory="frontend", html=True),
+        #     name="frontend",
+        # )
 
     async def initialize(self):
         """Asynchronously load the service context from config.

@@ -125,7 +125,8 @@ def run(console_log_level: str):
     lang = upgrade_manager.lang
 
     # Check if the frontend submodule is initialized
-    check_frontend_submodule(lang)
+    # DISABLED: Frontend serving disabled for separate frontend development
+    # check_frontend_submodule(lang)
 
     # Sync user config with default config
     try:

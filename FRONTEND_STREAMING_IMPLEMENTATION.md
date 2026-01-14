@@ -580,7 +580,6 @@ Frontend engineer should complete:
 - [ ] Ensure backward compatibility with traditional audio
 - [ ] Add performance logging
 - [ ] Test with GPT-SoVITS (streaming mode)
-- [ ] Test with Azure TTS (traditional mode)
 - [ ] Test multiple concurrent messages
 - [ ] Add error handling for MediaSource API failures
 - [ ] Add fallback for unsupported browsers
