@@ -189,8 +189,13 @@ class TTSEngine(TTSInterface):
                         chunk_count += 1
                         total_bytes += len(chunk)
 
+                        # Check if this chunk contains WAV header (starts with "RIFF")
+                        is_wav_header = chunk[:4] == b'RIFF' if len(chunk) >= 4 else False
+
                         if chunk_count == 1:
-                            logger.debug(f"🎵 Yielding WAV header chunk ({len(chunk)} bytes)")
+                            logger.debug(f"🎵 Chunk {chunk_count}: {len(chunk)} bytes, WAV header: {is_wav_header}")
+                        elif chunk_count <= 5:
+                            logger.debug(f"🎵 Chunk {chunk_count}: {len(chunk)} bytes, WAV header: {is_wav_header}")
 
                         yield chunk
 
