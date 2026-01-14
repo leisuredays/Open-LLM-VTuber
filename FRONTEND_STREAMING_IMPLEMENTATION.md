@@ -15,8 +15,7 @@ The backend now supports **real-time audio streaming** for TTS engines (currentl
 Implement MediaSource API-based audio streaming in the frontend to:
 1. Receive and play audio chunks in real-time as they arrive from the backend
 2. Reduce time-to-first-sound from ~2s to ~0.6s
-3. Maintain Live2D lip sync functionality with real-time volume analysis
-4. Maintain backward compatibility with traditional single-payload audio
+3. Maintain backward compatibility with traditional single-payload audio
 
 ---
 
@@ -27,14 +26,12 @@ Implement MediaSource API-based audio streaming in the frontend to:
 Backend:
 1. Generate complete audio file (2 seconds)
 2. Load entire file into memory
-3. Calculate volumes for all 20ms chunks
-4. Send single WebSocket message with complete audio + volumes
+3. Send single WebSocket message with complete audio
 
 Frontend:
 1. Receive complete audio Base64
 2. Create data URL
 3. Play audio with HTML5 Audio element
-4. Use pre-calculated volumes for lip sync
 ```
 
 ### New Flow (Streaming)
@@ -48,8 +45,7 @@ Backend:
 Frontend (TO BE IMPLEMENTED):
 1. Receive "audio-start" → prepare MediaSource
 2. Receive "audio-chunk" → append to SourceBuffer
-3. Calculate real-time volumes for lip sync
-4. Receive "audio-complete" → finalize MediaSource
+3. Receive "audio-complete" → finalize MediaSource
 ```
 
 ---
@@ -73,7 +69,7 @@ interface AudioStartMessage {
     expressions?: number[];
     motions?: number[];
   } | null;
-  slice_length: number;       // 20 (ms per lip sync chunk)
+  slice_length: number;       // Reserved for future use
 }
 ```
 
@@ -158,8 +154,8 @@ The existing message type for non-streaming TTS engines. **Must still be support
 interface AudioMessage {
   type: "audio";
   audio: string | null;       // Complete audio Base64 or null
-  volumes: number[];          // Pre-calculated volumes for lip sync
-  slice_length: number;       // 20 (ms per chunk)
+  volumes: number[];          // Volume data for traditional playback
+  slice_length: number;       // Chunk duration in ms
   display_text: {...};
   actions: {...} | null;
   forwarded?: boolean;
@@ -170,7 +166,7 @@ interface AudioMessage {
 
 ## 🛠️ Implementation Requirements
 
-### Part 1: MediaSource API for Audio Streaming
+### MediaSource API for Audio Streaming
 
 The HTML5 `<audio>` element with data URLs cannot handle streaming. You need to use the **MediaSource API**.
 
@@ -415,128 +411,6 @@ function handleAudioComplete(message: AudioCompleteMessage) {
 
 ---
 
-### Part 2: Real-Time Lip Sync with Web Audio API
-
-Since the backend no longer sends pre-calculated `volumes` in streaming mode, you need to calculate volumes in real-time using the **Web Audio API**.
-
-#### Implementation
-
-```typescript
-class LipSyncAnalyzer {
-  private audioContext: AudioContext;
-  private analyser: AnalyserNode;
-  private dataArray: Uint8Array;
-  private animationFrameId: number | null = null;
-
-  constructor() {
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 256;
-    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-  }
-
-  connectAudio(audioElement: HTMLAudioElement) {
-    // Create MediaElementSource
-    const source = this.audioContext.createMediaElementSource(audioElement);
-
-    // Connect: source → analyser → destination
-    source.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
-
-    console.log('[LipSync] Audio connected to analyser');
-  }
-
-  startAnalysis(onVolumeUpdate: (normalizedVolume: number) => void) {
-    const analyze = () => {
-      // Get frequency data
-      this.analyser.getByteFrequencyData(this.dataArray);
-
-      // Calculate average volume (RMS-like)
-      let sum = 0;
-      for (let i = 0; i < this.dataArray.length; i++) {
-        sum += this.dataArray[i];
-      }
-      const average = sum / this.dataArray.length;
-
-      // Normalize to 0-1 range (255 is max byte value)
-      const normalizedVolume = average / 255;
-
-      // Send to Live2D
-      onVolumeUpdate(normalizedVolume);
-
-      // Continue analysis
-      this.animationFrameId = requestAnimationFrame(analyze);
-    };
-
-    analyze();
-  }
-
-  stopAnalysis() {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-  }
-}
-
-// Global lip sync analyzer
-let lipSyncAnalyzer: LipSyncAnalyzer | null = null;
-
-// Initialize once
-function initLipSync() {
-  if (!lipSyncAnalyzer) {
-    lipSyncAnalyzer = new LipSyncAnalyzer();
-
-    const audioElement = document.getElementById('main-audio') as HTMLAudioElement;
-    lipSyncAnalyzer.connectAudio(audioElement);
-  }
-}
-
-// Start/stop with audio playback
-audioElement.addEventListener('play', () => {
-  initLipSync();
-  lipSyncAnalyzer!.startAnalysis((volume) => {
-    // Update Live2D mouth opening
-    updateLive2DMouth(volume);
-  });
-});
-
-audioElement.addEventListener('pause', () => {
-  if (lipSyncAnalyzer) {
-    lipSyncAnalyzer.stopAnalysis();
-  }
-});
-
-audioElement.addEventListener('ended', () => {
-  if (lipSyncAnalyzer) {
-    lipSyncAnalyzer.stopAnalysis();
-  }
-});
-```
-
-#### Integrate with Live2D
-
-```typescript
-function updateLive2DMouth(normalizedVolume: number) {
-  // Assuming you have a Live2D model instance
-  const live2dModel = getLive2DModel(); // Your existing function
-
-  if (!live2dModel) return;
-
-  // Map volume to mouth opening (0 = closed, 1 = fully open)
-  // You may need to adjust the parameter name based on your Live2D model
-  const mouthOpenParam = 'ParamMouthOpenY'; // Common parameter name
-
-  // Apply smoothing to avoid jittery animation
-  const currentValue = live2dModel.getParameterValue(mouthOpenParam) || 0;
-  const smoothedValue = currentValue * 0.7 + normalizedVolume * 0.3;
-
-  live2dModel.setParameterValue(mouthOpenParam, smoothedValue);
-}
-```
-
----
-
 ## 🔄 Backward Compatibility
 
 **CRITICAL**: The traditional `audio` message type must still work for non-streaming TTS engines (Azure, Edge, Melo, etc.).
@@ -557,24 +431,14 @@ function handleTraditionalAudio(message: AudioMessage) {
   const audioElement = document.getElementById('main-audio') as HTMLAudioElement;
   audioElement.src = `data:audio/wav;base64,${audio}`;
 
-  // Use pre-calculated volumes for lip sync
-  let volumeIndex = 0;
-  const lipSyncInterval = setInterval(() => {
-    if (volumeIndex >= volumes.length) {
-      clearInterval(lipSyncInterval);
-      return;
-    }
-
-    const volume = volumes[volumeIndex];
-    updateLive2DMouth(volume);
-    volumeIndex++;
-  }, slice_length);
-
   audioElement.play();
 
   // Display text and actions
   displayChatMessage(display_text);
   if (actions) applyLive2DActions(actions);
+
+  // Note: volumes array can be used for lip sync if needed
+  // Implementation depends on your existing Live2D integration
 }
 ```
 
@@ -592,9 +456,8 @@ function handleTraditionalAudio(message: AudioMessage) {
 1. User sends message
 2. ~0.6s later: audio starts playing (first chunk received)
 3. Audio continues playing as more chunks arrive
-4. Live2D mouth moves in sync with audio (real-time analysis)
-5. Chat message appears with audio
-6. Expression/motion applied
+4. Chat message appears with audio
+5. Expression/motion applied
 
 **Backend Logs** (for verification):
 ```
@@ -608,7 +471,6 @@ function handleTraditionalAudio(message: AudioMessage) {
 [AudioStream] Starting sequence 0
 [AudioStream] Received WAV header (8192 bytes)
 [AudioStream] Starting playback
-[LipSync] Audio connected to analyser
 [AudioStream] Completed with 15 chunks
 [AudioStream] MediaSource closed
 ```
@@ -622,12 +484,11 @@ function handleTraditionalAudio(message: AudioMessage) {
 1. User sends message
 2. ~2s later: complete audio arrives
 3. Audio plays using traditional method
-4. Lip sync works with pre-calculated volumes
-5. No MediaSource API involved
+4. No MediaSource API involved
 
 **Verification**:
 - Check that `message.type === 'audio'` (not `audio-start`)
-- Ensure existing lip sync logic still works
+- Ensure existing audio playback logic still works
 
 ### Test Case 3: Multiple Concurrent Messages
 
@@ -691,12 +552,7 @@ audioElement.addEventListener('play', () => {
 - Audio streaming may consume more battery than traditional method
 - Consider adding user preference toggle for streaming vs traditional
 
-### 3. Lip Sync Accuracy
-- Real-time volume analysis is less accurate than pre-calculated volumes
-- May need to adjust smoothing parameters for your Live2D model
-- Frequency-based analysis (current implementation) vs time-domain analysis (backend method)
-
-### 4. Network Conditions
+### 3. Network Conditions
 - Poor network: chunks may arrive slowly, causing stuttering
 - Consider implementing buffering strategy (wait for N chunks before playing)
 
@@ -707,10 +563,6 @@ audioElement.addEventListener('play', () => {
 ### MediaSource API
 - [MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/MediaSource)
 - [HTML5 Rocks Tutorial](https://www.html5rocks.com/en/tutorials/eme/basics/)
-
-### Web Audio API
-- [MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-- [Real-time Audio Processing](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API)
 
 ### WAV Format
 - [WAV Specification](http://soundfile.sapp.org/doc/WaveFormat/)
@@ -725,8 +577,6 @@ Frontend engineer should complete:
 - [ ] Add TypeScript interfaces for new message types
 - [ ] Implement `AudioStreamManager` class with MediaSource API
 - [ ] Add WebSocket message handlers (audio-start, audio-chunk, audio-complete)
-- [ ] Implement `LipSyncAnalyzer` class with Web Audio API
-- [ ] Integrate real-time lip sync with Live2D
 - [ ] Ensure backward compatibility with traditional audio
 - [ ] Add performance logging
 - [ ] Test with GPT-SoVITS (streaming mode)
@@ -761,7 +611,7 @@ Or contact the backend team for assistance.
 
 **Priority**: 🔴 **HIGH** - Blocking feature for real-time TTS experience
 
-**Estimated Effort**: 2-3 days (including testing)
+**Estimated Effort**: 1-2 days (including testing)
 
 **Dependencies**: None (backend complete)
 
