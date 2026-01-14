@@ -5,6 +5,7 @@
 import re
 import requests
 from io import BytesIO
+from typing import AsyncGenerator
 from loguru import logger
 from .tts_interface import TTSInterface
 
@@ -135,3 +136,69 @@ class TTSEngine(TTSInterface):
         except requests.exceptions.RequestException as e:
             logger.critical(f"Error: Request failed: {e}")
             return None
+
+    async def stream_audio(self, text: str) -> AsyncGenerator[bytes, None]:
+        """
+        Stream audio chunks in real-time from GPT-SoVITS API.
+
+        First chunk contains WAV header, subsequent chunks contain PCM audio data.
+
+        Args:
+            text: Text to synthesize
+
+        Yields:
+            bytes: Audio chunks (first chunk = WAV header, rest = PCM data)
+        """
+        if self.streaming_mode == 0:
+            raise ValueError("Streaming is disabled (streaming_mode=0). Use generate_audio() instead.")
+
+        cleaned_text = re.sub(r"\[.*?\]", "", text)
+
+        # Prepare the data for the request
+        data = {
+            "text": cleaned_text,
+            "text_lang": self.text_lang,
+            "ref_audio_path": self.ref_audio_path,
+            "prompt_lang": self.prompt_lang,
+            "prompt_text": self.prompt_text,
+            "text_split_method": self.text_split_method,
+            "batch_size": self.batch_size,
+            "media_type": self.media_type,
+            "streaming_mode": self.streaming_mode,
+
+            # WebUI settings
+            "speed_factor": getattr(self, "speed_factor", 1.0),
+            "fragment_interval": getattr(self, "fragment_interval", 0.3),
+            "top_k": getattr(self, "top_k", 15),
+            "top_p": getattr(self, "top_p", 1.0),
+            "temperature": getattr(self, "temperature", 1.0),
+            "seed": getattr(self, "seed", -1),
+            "repetition_penalty": getattr(self, "repetition_penalty", 1.35)
+        }
+
+        try:
+            logger.debug(f"🎵 Streaming audio chunks for: '{cleaned_text[:50]}...'")
+            response = requests.get(self.api_url, params=data, timeout=120, stream=True)
+
+            if response.status_code == 200:
+                chunk_count = 0
+                total_bytes = 0
+
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        chunk_count += 1
+                        total_bytes += len(chunk)
+
+                        if chunk_count == 1:
+                            logger.debug(f"🎵 Yielding WAV header chunk ({len(chunk)} bytes)")
+
+                        yield chunk
+
+                logger.info(f"🎵 Streamed {chunk_count} chunks, total {total_bytes} bytes")
+            else:
+                logger.error(f"Error: Failed to stream audio. Status code: {response.status_code}")
+                raise RuntimeError(f"GPT-SoVITS API returned status {response.status_code}")
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error: Stream request failed: {e}")
+            raise

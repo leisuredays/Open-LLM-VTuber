@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import uuid
+import base64
 from datetime import datetime
 from typing import List, Optional, Dict
 from loguru import logger
@@ -76,37 +77,72 @@ class TTSTaskManager:
                 self._process_payload_queue(websocket_send)
             )
 
-        # Create and queue the TTS task
-        task = asyncio.create_task(
-            self._process_tts(
-                tts_text=tts_text,
-                display_text=display_text,
-                actions=actions,
-                live2d_model=live2d_model,
-                tts_engine=tts_engine,
-                sequence_number=current_sequence,
+        # Check if TTS engine supports streaming
+        supports_streaming = hasattr(tts_engine, 'stream_audio') and callable(getattr(tts_engine, 'stream_audio'))
+
+        # Create and queue the TTS task (streaming or traditional)
+        if supports_streaming:
+            task = asyncio.create_task(
+                self._process_tts_streaming(
+                    tts_text=tts_text,
+                    display_text=display_text,
+                    actions=actions,
+                    live2d_model=live2d_model,
+                    tts_engine=tts_engine,
+                    sequence_number=current_sequence,
+                )
             )
-        )
+        else:
+            task = asyncio.create_task(
+                self._process_tts(
+                    tts_text=tts_text,
+                    display_text=display_text,
+                    actions=actions,
+                    live2d_model=live2d_model,
+                    tts_engine=tts_engine,
+                    sequence_number=current_sequence,
+                )
+            )
         self.task_list.append(task)
 
     async def _process_payload_queue(self, websocket_send: WebSocketSend) -> None:
         """
         Process and send payloads in correct order.
+        Supports both traditional single-payload mode and streaming multi-chunk mode.
         Runs continuously until all payloads are processed.
         """
-        buffered_payloads: Dict[int, Dict] = {}
+        from collections import defaultdict
+        buffered_payloads: Dict[int, List[Dict]] = defaultdict(list)
 
         while True:
             try:
                 # Get payload from queue
                 payload, sequence_number = await self._payload_queue.get()
-                buffered_payloads[sequence_number] = payload
 
-                # Send payloads in order
+                # Add to buffer
+                buffered_payloads[sequence_number].append(payload)
+
+                # Send payloads for current sequence in order
                 while self._next_sequence_to_send in buffered_payloads:
-                    next_payload = buffered_payloads.pop(self._next_sequence_to_send)
-                    await websocket_send(json.dumps(next_payload))
-                    self._next_sequence_to_send += 1
+                    sequence_payloads = buffered_payloads[self._next_sequence_to_send]
+
+                    # Send all payloads for this sequence
+                    for seq_payload in sequence_payloads:
+                        await websocket_send(json.dumps(seq_payload))
+
+                    # Check if sequence is complete
+                    last_payload = sequence_payloads[-1]
+                    payload_type = last_payload.get("type")
+
+                    # Sequence is complete if:
+                    # 1. It's a traditional "audio" payload (single payload per sequence)
+                    # 2. It's an "audio-complete" payload (end of streaming)
+                    if payload_type in ("audio", "audio-complete"):
+                        buffered_payloads.pop(self._next_sequence_to_send)
+                        self._next_sequence_to_send += 1
+                    else:
+                        # Still waiting for more chunks/completion
+                        break
 
                 self._payload_queue.task_done()
 
@@ -173,6 +209,83 @@ class TTSTaskManager:
         )
         logger.debug(f"👄 [TTS] Generated audio file: {audio_path}")
         return audio_path
+
+    async def _process_tts_streaming(
+        self,
+        tts_text: str,
+        display_text: DisplayText,
+        actions: Optional[Actions],
+        live2d_model: Live2dModel,
+        tts_engine: TTSInterface,
+        sequence_number: int,
+    ) -> None:
+        """Process TTS generation with real-time streaming and queue chunks for ordered delivery"""
+        try:
+            logger.debug(f"🎵 [Streaming] Starting streaming TTS for: '{tts_text[:50]}...'")
+
+            # Send audio-start payload with metadata
+            start_payload = {
+                "type": "audio-start",
+                "sequence": sequence_number,
+                "display_text": display_text.to_dict() if hasattr(display_text, 'to_dict') else display_text,
+                "actions": actions.to_dict() if actions else None,
+                "slice_length": 20,  # 20ms chunks for lip sync
+            }
+            await self._payload_queue.put((start_payload, sequence_number))
+            logger.debug(f"🎵 [Streaming] Sent audio-start for sequence {sequence_number}")
+
+            # Stream audio chunks
+            chunk_index = 0
+            try:
+                async for audio_chunk in tts_engine.stream_audio(tts_text):
+                    chunk_base64 = base64.b64encode(audio_chunk).decode('utf-8')
+                    chunk_payload = {
+                        "type": "audio-chunk",
+                        "sequence": sequence_number,
+                        "chunk_index": chunk_index,
+                        "audio": chunk_base64,
+                        "is_header": (chunk_index == 0),  # First chunk is WAV header
+                    }
+                    await self._payload_queue.put((chunk_payload, sequence_number))
+
+                    if chunk_index == 0:
+                        logger.info(f"🎵 [Streaming] Sent WAV header chunk ({len(audio_chunk)} bytes)")
+
+                    chunk_index += 1
+
+                logger.info(f"🎵 [Streaming] Completed streaming {chunk_index} chunks for sequence {sequence_number}")
+
+            except NotImplementedError as e:
+                logger.warning(f"🎵 [Streaming] TTS engine doesn't support streaming, falling back: {e}")
+                # Fallback to traditional method
+                audio_file_path = await self._generate_audio(tts_engine, tts_text)
+                payload = prepare_audio_payload(
+                    audio_path=audio_file_path,
+                    display_text=display_text,
+                    actions=actions,
+                )
+                await self._payload_queue.put((payload, sequence_number))
+                tts_engine.remove_file(audio_file_path)
+                return
+
+            # Send audio-complete payload
+            complete_payload = {
+                "type": "audio-complete",
+                "sequence": sequence_number,
+                "total_chunks": chunk_index,
+            }
+            await self._payload_queue.put((complete_payload, sequence_number))
+            logger.debug(f"🎵 [Streaming] Sent audio-complete for sequence {sequence_number}")
+
+        except Exception as e:
+            logger.error(f"Error in streaming TTS: {e}")
+            # Queue silent payload for error case
+            payload = prepare_audio_payload(
+                audio_path=None,
+                display_text=display_text,
+                actions=actions,
+            )
+            await self._payload_queue.put((payload, sequence_number))
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""

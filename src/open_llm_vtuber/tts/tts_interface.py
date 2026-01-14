@@ -1,6 +1,7 @@
 import abc
 import os
 import asyncio
+from typing import AsyncGenerator, Optional
 
 from loguru import logger
 
@@ -23,6 +24,26 @@ class TTSInterface(metaclass=abc.ABCMeta):
 
         """
         return await asyncio.to_thread(self.generate_audio, text, file_name_no_ext)
+
+    async def stream_audio(self, text: str) -> AsyncGenerator[bytes, None]:
+        """
+        Stream audio chunks as they're generated (optional, not all TTS engines support this).
+
+        This method enables real-time audio streaming for supported TTS engines.
+        If not implemented, the TTS system will fall back to the standard generate_audio method.
+
+        Args:
+            text: The text to synthesize
+
+        Yields:
+            bytes: Audio chunks as they're generated
+
+        Raises:
+            NotImplementedError: If the TTS engine doesn't support streaming
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not support audio streaming")
+        # Make this a generator to satisfy type hints
+        yield  # This line is never reached but satisfies AsyncGenerator type
 
     @abc.abstractmethod
     def generate_audio(self, text: str, file_name_no_ext=None) -> str:
