@@ -20,13 +20,12 @@ class TTSTaskManager:
     def __init__(self) -> None:
         self.task_list: List[asyncio.Task] = []
         self._lock = asyncio.Lock()
-        # Queue to store ordered payloads
+        # Queue to store payloads for immediate transmission
         self._payload_queue: asyncio.Queue[Dict] = asyncio.Queue()
-        # Task to handle sending payloads in order
+        # Task to handle sending payloads
         self._sender_task: Optional[asyncio.Task] = None
-        # Counter for maintaining order
+        # Counter for sequence numbering
         self._sequence_counter = 0
-        self._next_sequence_to_send = 0
 
     async def speak(
         self,
@@ -107,68 +106,29 @@ class TTSTaskManager:
 
     async def _process_payload_queue(self, websocket_send: WebSocketSend) -> None:
         """
-        Process and send payloads in correct order with real-time streaming.
+        Send audio payloads to frontend immediately as they're generated.
 
-        Key behavior:
-        - Current sequence: Send chunks immediately as they arrive (real-time)
-        - Future sequences: Buffer until their turn (order guarantee)
+        NO buffering, NO ordering - just send chunks as fast as they're ready!
+        Frontend is responsible for ordering and playback sequencing.
         """
-        from collections import defaultdict
-        buffered_payloads: Dict[int, List[Dict]] = defaultdict(list)
-        sent_counts: Dict[int, int] = defaultdict(int)  # Track how many payloads sent per sequence
-
         while True:
             try:
-                # Get payload from queue
+                # Get payload from queue and send IMMEDIATELY
                 payload, sequence_number = await self._payload_queue.get()
+                await websocket_send(json.dumps(payload))
 
-                # Add to buffer
-                buffered_payloads[sequence_number].append(payload)
-
-                # Log when chunk arrives (for debugging)
+                # Log what was sent
                 payload_type = payload.get("type")
-                if payload_type == "audio-chunk":
+                if payload_type == "audio-start":
+                    logger.debug(f"📤 [WebSocket] Sent audio-start for sequence {sequence_number}")
+                elif payload_type == "audio-chunk":
                     chunk_idx = payload.get("chunk_index")
-                    logger.debug(f"🔽 [Queue] Received chunk {chunk_idx} for sequence {sequence_number}")
-
-                # Try to send all ready sequences in order
-                while self._next_sequence_to_send in buffered_payloads:
-                    sequence_payloads = buffered_payloads[self._next_sequence_to_send]
-                    sent_count = sent_counts[self._next_sequence_to_send]
-
-                    # Send only NEW payloads (not already sent)
-                    for i in range(sent_count, len(sequence_payloads)):
-                        current_payload = sequence_payloads[i]
-                        await websocket_send(json.dumps(current_payload))
-                        sent_counts[self._next_sequence_to_send] += 1
-
-                        # Log payload type being sent
-                        payload_type = current_payload.get("type")
-                        if payload_type == "audio-start":
-                            logger.debug(f"📤 [WebSocket] Sent audio-start for sequence {self._next_sequence_to_send}")
-                        elif payload_type == "audio-chunk":
-                            chunk_idx = current_payload.get("chunk_index")
-                            if chunk_idx == 0 or chunk_idx % 10 == 0:  # Log first chunk and every 10th
-                                logger.debug(f"📤 [WebSocket] Sent audio-chunk {chunk_idx} for sequence {self._next_sequence_to_send}")
-                        elif payload_type == "audio-complete":
-                            logger.info(f"📤 [WebSocket] Sent audio-complete for sequence {self._next_sequence_to_send}")
-                        elif payload_type == "audio":
-                            logger.debug(f"📤 [WebSocket] Sent traditional audio for sequence {self._next_sequence_to_send}")
-
-                    # Check if sequence is complete
-                    last_payload = sequence_payloads[-1]
-                    payload_type = last_payload.get("type")
-
-                    # Sequence is complete if:
-                    # 1. It's a traditional "audio" payload (single payload per sequence)
-                    # 2. It's an "audio-complete" payload (end of streaming)
-                    if payload_type in ("audio", "audio-complete"):
-                        buffered_payloads.pop(self._next_sequence_to_send)
-                        sent_counts.pop(self._next_sequence_to_send, None)
-                        self._next_sequence_to_send += 1
-                    else:
-                        # Still waiting for more chunks/completion
-                        break
+                    if chunk_idx == 0 or chunk_idx % 10 == 0:  # Log first chunk and every 10th
+                        logger.debug(f"📤 [WebSocket] Sent audio-chunk {chunk_idx} for sequence {sequence_number}")
+                elif payload_type == "audio-complete":
+                    logger.info(f"📤 [WebSocket] Sent audio-complete for sequence {sequence_number}")
+                elif payload_type == "audio":
+                    logger.debug(f"📤 [WebSocket] Sent traditional audio for sequence {sequence_number}")
 
                 self._payload_queue.task_done()
 
@@ -319,6 +279,5 @@ class TTSTaskManager:
         if self._sender_task:
             self._sender_task.cancel()
         self._sequence_counter = 0
-        self._next_sequence_to_send = 0
         # Create a new queue to clear any pending items
         self._payload_queue = asyncio.Queue()
