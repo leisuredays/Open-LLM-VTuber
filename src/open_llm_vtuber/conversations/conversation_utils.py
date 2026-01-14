@@ -50,8 +50,9 @@ async def process_agent_output(
     websocket_send: WebSocketSend,
     tts_manager: TTSTaskManager,
     translate_engine: Optional[Any] = None,
+    emotion_analyzer: Optional[Any] = None,
 ) -> str:
-    """Process agent output with character information and optional translation"""
+    """Process agent output with character information, optional translation, and emotion analysis"""
     output.display_text.name = character_config.character_name
     output.display_text.avatar = character_config.avatar
 
@@ -65,6 +66,7 @@ async def process_agent_output(
                 websocket_send,
                 tts_manager,
                 translate_engine,
+                emotion_analyzer,
             )
         elif isinstance(output, AudioOutput):
             full_response = await handle_audio_output(output, websocket_send)
@@ -88,11 +90,39 @@ async def handle_sentence_output(
     websocket_send: WebSocketSend,
     tts_manager: TTSTaskManager,
     translate_engine: Optional[Any] = None,
+    emotion_analyzer: Optional[Any] = None,
 ) -> str:
-    """Handle sentence output type with optional translation support"""
+    """Handle sentence output type with optional translation and emotion analysis support"""
     full_response = ""
     async for display_text, tts_text, actions in output:
         logger.debug(f"🏃 Processing output: '''{tts_text}'''...")
+
+        # Emotion analysis (if enabled)
+        if emotion_analyzer and emotion_analyzer.is_ready():
+            try:
+                detected_emotion = emotion_analyzer.analyze(display_text.text)
+                logger.info(f"🎭 Detected emotion: {detected_emotion}")
+
+                # Create Actions object if not provided
+                if not actions:
+                    from ..agent.output_types import Actions
+
+                    actions = Actions()
+
+                # Set Live2D expression based on detected emotion
+                if detected_emotion in live2d_model.emo_map:
+                    emotion_index = live2d_model.emo_map[detected_emotion]
+                    actions.expressions = [emotion_index]
+                    logger.debug(
+                        f"🎭 Setting Live2D expression: {detected_emotion} (index: {emotion_index})"
+                    )
+                else:
+                    logger.debug(
+                        f"🎭 Emotion '{detected_emotion}' not in Live2D emotion map, skipping"
+                    )
+
+            except Exception as e:
+                logger.warning(f"Error during emotion analysis: {e}")
 
         if translate_engine:
             if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)):

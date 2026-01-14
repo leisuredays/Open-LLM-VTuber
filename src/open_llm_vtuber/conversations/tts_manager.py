@@ -140,6 +140,7 @@ class TTSTaskManager:
         audio_file_path = None
         try:
             audio_file_path = await self._generate_audio(tts_engine, tts_text)
+            logger.debug(f"👄 [TTS] Calling prepare_audio_payload with audio_path: {audio_file_path}")
             payload = prepare_audio_payload(
                 audio_path=audio_file_path,
                 display_text=display_text,
@@ -166,10 +167,12 @@ class TTSTaskManager:
     async def _generate_audio(self, tts_engine: TTSInterface, text: str) -> str:
         """Generate audio file from text"""
         logger.debug(f"🏃Generating audio for '''{text}'''...")
-        return await tts_engine.async_generate_audio(
+        audio_path = await tts_engine.async_generate_audio(
             text=text,
             file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",
         )
+        logger.debug(f"👄 [TTS] Generated audio file: {audio_path}")
+        return audio_path
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""

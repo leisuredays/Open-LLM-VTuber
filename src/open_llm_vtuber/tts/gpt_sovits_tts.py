@@ -4,6 +4,7 @@
 
 import re
 import requests
+from io import BytesIO
 from loguru import logger
 from .tts_interface import TTSInterface
 
@@ -83,23 +84,44 @@ class TTSEngine(TTSInterface):
 
             # Check if the request was successful
             if response.status_code == 200:
-                # Save the audio content to a file
-                with open(file_name, "wb") as audio_file:
-                    if self.streaming_mode > 0:
-                        # Stream mode: receive chunks
-                        # First chunk contains WAV header, subsequent chunks are raw PCM
-                        chunk_count = 0
-                        total_bytes = 0
-                        for chunk in response.iter_content(chunk_size=8192):
-                            if chunk:
-                                audio_file.write(chunk)
-                                chunk_count += 1
-                                total_bytes += len(chunk)
-                        logger.debug(f"🎵 Received {chunk_count} chunks, total {total_bytes} bytes")
-                    else:
-                        # Non-streaming: receive all at once
+                if self.streaming_mode > 0:
+                    # Stream mode: receive chunks into memory buffer
+                    # GPT-SoVITS sends: 1st chunk = WAV header, rest = audio data
+                    logger.debug(f"🎵 Streaming mode {self.streaming_mode} - receiving chunks")
+
+                    audio_buffer = BytesIO()
+                    chunk_count = 0
+                    total_bytes = 0
+
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            audio_buffer.write(chunk)
+                            chunk_count += 1
+                            total_bytes += len(chunk)
+
+                    logger.debug(f"🎵 Received {chunk_count} chunks, total {total_bytes} bytes")
+
+                    # Validate and fix WAV file if needed
+                    audio_buffer.seek(0)
+                    try:
+                        from pydub import AudioSegment
+
+                        # Load audio from buffer and re-export to ensure valid WAV
+                        audio = AudioSegment.from_file(audio_buffer, format="wav")
+                        audio.export(file_name, format="wav")
+
+                        logger.debug(f"🎵 WAV file validated and saved: duration={len(audio)}ms")
+                    except Exception as e:
+                        # If validation fails, save raw data
+                        logger.warning(f"🎵 WAV validation failed, saving raw data: {e}")
+                        audio_buffer.seek(0)
+                        with open(file_name, "wb") as f:
+                            f.write(audio_buffer.read())
+                else:
+                    # Non-streaming: receive all at once
+                    with open(file_name, "wb") as audio_file:
                         audio_file.write(response.content)
-                        logger.debug(f"🎵 Received {len(response.content)} bytes")
+                    logger.debug(f"🎵 Received {len(response.content)} bytes")
 
                 logger.info(f"🎵 Audio saved to {file_name}")
                 return file_name

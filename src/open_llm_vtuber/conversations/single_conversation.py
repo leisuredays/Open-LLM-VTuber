@@ -124,6 +124,7 @@ async def process_single_conversation(
                         websocket_send=websocket_send,  # Pass websocket_send for audio/tts messages
                         tts_manager=tts_manager,
                         translate_engine=context.translate_engine,
+                        emotion_analyzer=context.emotion_analyzer,
                     )
                     # Ensure response_part is treated as a string before concatenation
                     response_part_str = (

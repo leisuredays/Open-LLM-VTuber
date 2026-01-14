@@ -54,6 +54,8 @@ class ServiceContext:
         # translate_engine can be none if translation is disabled
         self.vad_engine: VADInterface | None = None
         self.translate_engine: TranslateInterface | None = None
+        # emotion_analyzer can be none if emotion analysis is disabled
+        self.emotion_analyzer = None
 
         self.mcp_server_registery: ServerRegistry | None = None
         self.tool_adapter: ToolAdapter | None = None
@@ -238,6 +240,7 @@ class ServiceContext:
         vad_engine: VADInterface,
         agent_engine: AgentInterface,
         translate_engine: TranslateInterface | None,
+        emotion_analyzer=None,
         mcp_server_registery: ServerRegistry | None = None,
         tool_adapter: ToolAdapter | None = None,
         send_text: Callable = None,
@@ -261,6 +264,7 @@ class ServiceContext:
         self.vad_engine = vad_engine
         self.agent_engine = agent_engine
         self.translate_engine = translate_engine
+        self.emotion_analyzer = emotion_analyzer
         # Load potentially shared components by reference
         self.mcp_server_registery = mcp_server_registery
         self.tool_adapter = tool_adapter
@@ -344,6 +348,9 @@ class ServiceContext:
         self.init_translate(
             config.character_config.tts_preprocessor_config.translator_config
         )
+
+        # init emotion analyzer from character config
+        self.init_emotion(config.character_config.emotion_config)
 
         # store typed config references
         self.config = config
@@ -470,6 +477,52 @@ class ServiceContext:
             )
         else:
             logger.info("Translation already initialized with the same config.")
+
+    def init_emotion(self, emotion_config) -> None:
+        """Initialize or update the emotion analyzer based on configuration."""
+        from .config_manager.emotion import EmotionConfig
+
+        if emotion_config is None or not emotion_config.enabled:
+            logger.debug("Emotion analysis is disabled.")
+            self.emotion_analyzer = None
+            return
+
+        if (
+            not self.emotion_analyzer
+            or self.character_config.emotion_config != emotion_config
+        ):
+            logger.info(f"Initializing Emotion Analyzer: {emotion_config.engine}")
+            try:
+                from .emotion.emotion_factory import EmotionAnalyzerFactory
+
+                # Get engine config
+                if emotion_config.engine == "transformer":
+                    if emotion_config.transformer_analyzer:
+                        engine_config = emotion_config.transformer_analyzer.model_dump()
+                    else:
+                        engine_config = {}
+                else:
+                    engine_config = {}
+
+                self.emotion_analyzer = EmotionAnalyzerFactory.get_analyzer(
+                    emotion_config.engine, **engine_config
+                )
+
+                if self.emotion_analyzer.is_ready():
+                    logger.success("✨ Emotion analyzer ready for Live2D control!")
+                else:
+                    logger.warning(
+                        "Emotion analyzer initialized but not ready (dependencies missing?)"
+                    )
+
+                self.character_config.emotion_config = emotion_config
+
+            except Exception as e:
+                logger.error(f"Failed to initialize emotion analyzer: {e}")
+                logger.warning("Continuing without emotion analysis")
+                self.emotion_analyzer = None
+        else:
+            logger.info("Emotion analyzer already initialized with the same config.")
 
     # ==== utils
 

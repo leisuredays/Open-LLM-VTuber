@@ -26,5 +26,26 @@
                 "": 1
             }
         }
+    },
+    {
+        "name": "dianzi",
+        "description": "Dianzi character model with unique expressions",
+        "url": "/live2d-models/dianzi/runtime/dianzi.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": 0,
+            "anger": 0,
+            "disgust": 1,
+            "fear": 2,
+            "joy": 3,
+            "smirk": 4,
+            "sadness": 10,
+            "surprise": 5
+        },
+        "tapMotions": {}
     }
 ]

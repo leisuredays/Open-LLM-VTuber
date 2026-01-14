@@ -1,11 +1,12 @@
 # config_manager/character.py
 from pydantic import Field, field_validator
-from typing import Dict, ClassVar
+from typing import Dict, ClassVar, Optional
 from .i18n import I18nMixin, Description
 from .asr import ASRConfig
 from .tts import TTSConfig
 from .vad import VADConfig
 from .tts_preprocessor import TTSPreprocessorConfig
+from .emotion import EmotionConfig
 
 from .agent import AgentConfig
 
@@ -26,6 +27,9 @@ class CharacterConfig(I18nMixin):
     vad_config: VADConfig = Field(..., alias="vad_config")
     tts_preprocessor_config: TTSPreprocessorConfig = Field(
         ..., alias="tts_preprocessor_config"
+    )
+    emotion_config: Optional[EmotionConfig] = Field(
+        default=None, alias="emotion_config"
     )
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
@@ -66,6 +70,9 @@ class CharacterConfig(I18nMixin):
         ),
         "avatar": Description(
             en="Avatar image path for the character", zh="角色头像图片路径"
+        ),
+        "emotion_config": Description(
+            en="Configuration for automatic emotion analysis", zh="自动情感分析配置"
         ),
     }
 

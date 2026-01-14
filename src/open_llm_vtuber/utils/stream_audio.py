@@ -16,12 +16,18 @@ def _get_volume_by_chunks(audio: AudioSegment, chunk_length_ms: int) -> list:
     Returns:
         list: Normalized volumes for each chunk.
     """
+    from loguru import logger
+
     chunks = make_chunks(audio, chunk_length_ms)
     volumes = [chunk.rms for chunk in chunks]
     max_volume = max(volumes)
     if max_volume == 0:
         raise ValueError("Audio is empty or all zero.")
-    return [volume / max_volume for volume in volumes]
+
+    normalized_volumes = [volume / max_volume for volume in volumes]
+    logger.debug(f"👄 [Lip Sync] Calculated {len(normalized_volumes)} volume chunks, max_volume: {max_volume:.2f}")
+
+    return normalized_volumes
 
 
 def prepare_audio_payload(
@@ -44,11 +50,14 @@ def prepare_audio_payload(
     Returns:
         dict: The audio payload to be sent
     """
+    from loguru import logger
+
     if isinstance(display_text, DisplayText):
         display_text = display_text.to_dict()
 
     if not audio_path:
         # Return payload for silent display
+        logger.warning(f"👄 [Lip Sync] audio_path is None - no lip sync data!")
         return {
             "type": "audio",
             "audio": None,
@@ -59,9 +68,12 @@ def prepare_audio_payload(
             "forwarded": forwarded,
         }
 
+    logger.debug(f"👄 [Lip Sync] Processing audio file: {audio_path}")
+
     try:
         audio = AudioSegment.from_file(audio_path)
         audio_bytes = audio.export(format="wav").read()
+        logger.debug(f"👄 [Lip Sync] Audio loaded: duration={len(audio)}ms, size={len(audio_bytes)} bytes")
     except Exception as e:
         raise ValueError(
             f"Error loading or converting generated audio file to wav file '{audio_path}': {e}"
@@ -78,6 +90,12 @@ def prepare_audio_payload(
         "actions": actions.to_dict() if actions else None,
         "forwarded": forwarded,
     }
+
+    logger.info(f"👄 [Lip Sync] Payload ready: audio_size={len(audio_base64)} chars, volumes={len(volumes)} chunks")
+
+    # Debug: Log actions payload
+    if actions:
+        logger.debug(f"🎭 [WebSocket Payload] actions: {actions.to_dict()}")
 
     return payload
 
