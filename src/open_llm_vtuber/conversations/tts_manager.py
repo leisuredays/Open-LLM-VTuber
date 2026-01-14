@@ -113,6 +113,7 @@ class TTSTaskManager:
         """
         from collections import defaultdict
         buffered_payloads: Dict[int, List[Dict]] = defaultdict(list)
+        sent_counts: Dict[int, int] = defaultdict(int)  # Track how many payloads sent per sequence
 
         while True:
             try:
@@ -125,10 +126,12 @@ class TTSTaskManager:
                 # Send payloads for current sequence in order
                 while self._next_sequence_to_send in buffered_payloads:
                     sequence_payloads = buffered_payloads[self._next_sequence_to_send]
+                    sent_count = sent_counts[self._next_sequence_to_send]
 
-                    # Send all payloads for this sequence
-                    for seq_payload in sequence_payloads:
-                        await websocket_send(json.dumps(seq_payload))
+                    # Send only NEW payloads (not already sent)
+                    for i in range(sent_count, len(sequence_payloads)):
+                        await websocket_send(json.dumps(sequence_payloads[i]))
+                        sent_counts[self._next_sequence_to_send] += 1
 
                     # Check if sequence is complete
                     last_payload = sequence_payloads[-1]
@@ -139,6 +142,7 @@ class TTSTaskManager:
                     # 2. It's an "audio-complete" payload (end of streaming)
                     if payload_type in ("audio", "audio-complete"):
                         buffered_payloads.pop(self._next_sequence_to_send)
+                        sent_counts.pop(self._next_sequence_to_send, None)
                         self._next_sequence_to_send += 1
                     else:
                         # Still waiting for more chunks/completion
