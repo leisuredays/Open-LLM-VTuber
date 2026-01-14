@@ -358,7 +358,7 @@ character_config:
       text_split_method: 'cut5'
       batch_size: '1'
       media_type: 'wav'
-      streaming_mode: 'false'
+      streaming_mode: 2  # 0=disabled, 1=best quality, 2=medium quality (recommended), 3=faster/lower quality
 
     fish_api_tts:
       # The API key for the Fish TTS API.

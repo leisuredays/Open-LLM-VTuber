@@ -287,7 +287,7 @@ class GPTSoVITSConfig(I18nMixin):
     text_split_method: str = Field(..., alias="text_split_method")
     batch_size: str = Field(..., alias="batch_size")
     media_type: str = Field(..., alias="media_type")
-    streaming_mode: str = Field(..., alias="streaming_mode")
+    streaming_mode: int | str = Field(..., alias="streaming_mode")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "api_url": Description(
@@ -304,7 +304,10 @@ class GPTSoVITSConfig(I18nMixin):
         ),
         "batch_size": Description(en="Batch size for processing", zh="处理批次大小"),
         "media_type": Description(en="Output media type", zh="输出媒体类型"),
-        "streaming_mode": Description(en="Enable streaming mode", zh="启用流式模式"),
+        "streaming_mode": Description(
+            en="Streaming mode: 0=disabled, 1=best quality, 2=medium quality, 3=faster/lower quality",
+            zh="流式模式：0=禁用，1=最佳质量，2=中等质量，3=更快/较低质量",
+        ),
     }
 
 

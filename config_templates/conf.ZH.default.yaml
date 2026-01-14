@@ -358,7 +358,7 @@ character_config:
       text_split_method: 'cut5' # 文本分割方法
       batch_size: '1' # 批处理大小
       media_type: 'wav' # 媒体类型
-      streaming_mode: 'false' # 流模式
+      streaming_mode: 2  # 流式模式：0=禁用，1=最佳质量，2=中等质量（推荐），3=更快/较低质量
 
     fish_api_tts:
       # Fish TTS API 的 API 密钥。
