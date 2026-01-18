@@ -79,3 +79,6 @@ mcp_servers.json
 
 # Serena MCP memories
 .serena/memories/
+# Old duplicate directories (not tracked)
+Open-LLM-VTuber-Web/
+semantic-router/
