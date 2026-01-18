@@ -204,7 +204,7 @@ class TTSTaskManager:
 
                 logger.info(f"🎵 [Streaming] Completed streaming {chunk_index} chunks for sequence {sequence_number}")
 
-            except NotImplementedError as e:
+            except (NotImplementedError, ValueError) as e:
                 logger.warning(f"🎵 [Streaming] TTS engine doesn't support streaming, falling back: {e}")
                 # Fallback to traditional method
                 audio_file_path = await self._generate_audio(tts_engine, tts_text)
