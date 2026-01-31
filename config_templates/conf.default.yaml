@@ -21,7 +21,7 @@ system_config:
     # Prompt used when AI is asked to speak proactively
     proactive_speak_prompt: 'proactive_speak_prompt'
     # Prompt to enhance the LLM's ability to output speakable text
-    # speakable_prompt: 'speakable_prompt'
+    speakable_prompt: 'speakable_prompt'
     # Additional guidance for LLM on how to use tools
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
@@ -471,6 +471,8 @@ character_config:
     ignore_parentheses: True # ignore everything inside parentheses
     ignore_asterisks: True # ignore everything wrapped inside asterisks
     ignore_angle_brackets: True # ignore everything wrapped inside <text>
+    strip_markdown_formatting: True # strip markdown formatting markers (**, #, etc.) while preserving content
+    convert_units_to_spoken: False # convert units like °C, %, km to spoken Korean (Korean-only, enable explicitly)
 
     translator_config:
       # Like... you speak and read the subtitles in English, and the TTS speaks Japanese or that kind of things

@@ -23,7 +23,7 @@ system_config:
     # 当AI被要求主动说话时使用的提示词
     proactive_speak_prompt: 'proactive_speak_prompt'
     # 用来增强LLM输出可发音文本的提示词
-    # speakable_prompt: 'speakable_prompt'
+    speakable_prompt: 'speakable_prompt'
     # 额外指导 LLM 如何使用工具的提示词
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
@@ -466,6 +466,8 @@ character_config:
     ignore_parentheses: True # 从音频生成中删除括号包住的内容
     ignore_asterisks: True # 从音频生成中删除星号包住的内容(单双星号)
     ignore_angle_brackets: True # 从音频生成中删除尖括号包住的内容
+    strip_markdown_formatting: True # 去除马克当服式标记（**、# 等），保留内容
+    convert_units_to_spoken: False # 将 °C、%、km 等单位转为口语形式（韩语专用，需手动启用）
 
     translator_config:
       # 比如...你说话并阅读英语字幕，而 TTS 说日语之类的

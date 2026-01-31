@@ -4,6 +4,111 @@ from loguru import logger
 from ..translate.translate_interface import TranslateInterface
 
 
+def strip_markdown(text: str) -> str:
+    """
+    Remove markdown formatting markers while preserving the content text.
+
+    Handles: bold, italic, strikethrough, inline code, code blocks,
+    headers, bullet/numbered lists, links, images, blockquotes, horizontal rules.
+
+    Args:
+        text: The text with potential markdown formatting.
+
+    Returns:
+        The text with markdown markers removed but content preserved.
+    """
+    # Remove code blocks (``` ... ```)
+    text = re.sub(r"```[\s\S]*?```", "", text)
+
+    # Remove inline code (` ... `)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+
+    # Remove images ![alt](url) → alt
+    text = re.sub(r"!\[([^\]]*)\]\([^)]*\)", r"\1", text)
+
+    # Remove links [text](url) → text
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+
+    # Remove bold/italic markers: ***text***, **text**, *text*,
+    # ___text___, __text__, _text_ (word-boundary aware for underscores)
+    text = re.sub(r"\*{3}(.+?)\*{3}", r"\1", text)
+    text = re.sub(r"\*{2}(.+?)\*{2}", r"\1", text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"_{3}(.+?)_{3}", r"\1", text)
+    text = re.sub(r"_{2}(.+?)_{2}", r"\1", text)
+    text = re.sub(r"(?<!\w)_(.+?)_(?!\w)", r"\1", text)
+
+    # Remove strikethrough ~~text~~ → text
+    text = re.sub(r"~~(.+?)~~", r"\1", text)
+
+    # Remove horizontal rules (---, ***, ___ on their own line)
+    text = re.sub(r"^\s*[-*_]{3,}\s*$", "", text, flags=re.MULTILINE)
+
+    # Remove headers (# Header → Header)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+
+    # Remove blockquote markers (> text → text)
+    text = re.sub(r"^>\s?", "", text, flags=re.MULTILINE)
+
+    # Remove unordered list markers (- item, * item)
+    text = re.sub(r"^[\s]*[-*+]\s+", "", text, flags=re.MULTILINE)
+
+    # Remove ordered list markers (1. item → item)
+    text = re.sub(r"^[\s]*\d+\.\s+", "", text, flags=re.MULTILINE)
+
+    # Clean up extra whitespace
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ \t]+", " ", text)
+
+    return text.strip()
+
+
+def convert_units_to_spoken_korean(text: str) -> str:
+    """
+    Convert units and symbols to spoken Korean form for TTS.
+
+    Handles temperature (°C, °F, ℃, ℉), percentage (%), distance (km, m, cm, mm),
+    speed (km/h), weight (kg, g), volume (ml, mL, L, l), and negative temperatures.
+
+    Args:
+        text: The text containing units and symbols.
+
+    Returns:
+        The text with units converted to spoken Korean.
+    """
+    # Negative temperature: -3°C → 영하 3도 (must come before general °C)
+    text = re.sub(r"-\s*(\d+(?:\.\d+)?)\s*(?:°C|℃)", r"영하 \1도", text)
+    # Negative temperature Fahrenheit
+    text = re.sub(r"-\s*(\d+(?:\.\d+)?)\s*(?:°F|℉)", r"영하 화씨 \1도", text)
+
+    # Positive temperature: 25°C → 25도
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*(?:°C|℃)", r"\1도", text)
+    # Fahrenheit: 77°F → 화씨 77도
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*(?:°F|℉)", r"화씨 \1도", text)
+
+    # Percentage: 52% → 52퍼센트
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*%", r"\1퍼센트", text)
+
+    # Speed: km/h must come before km
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*km/h(?![a-zA-Z])", r"\1킬로미터", text)
+
+    # Distance/length (longer units first to avoid partial matches)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*km(?![a-zA-Z/])", r"\1킬로미터", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*cm(?![a-zA-Z])", r"\1센티미터", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*mm(?![a-zA-Z])", r"\1밀리미터", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*m(?![a-zA-Z])", r"\1미터", text)
+
+    # Weight (kg before g)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*kg(?![a-zA-Z])", r"\1킬로그램", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*g(?![a-zA-Z])", r"\1그램", text)
+
+    # Volume (mL/ml before L/l)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*(?:mL|ml)(?![a-zA-Z])", r"\1밀리리터", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s*(?:L|l)(?![a-zA-Z])", r"\1리터", text)
+
+    return text
+
+
 def tts_filter(
     text: str,
     remove_special_char: bool,
@@ -11,6 +116,8 @@ def tts_filter(
     ignore_parentheses: bool,
     ignore_asterisks: bool,
     ignore_angle_brackets: bool,
+    strip_markdown_formatting: bool = True,
+    convert_units_to_spoken: bool = False,
     translator: TranslateInterface | None = None,
 ) -> str:
     """
@@ -24,12 +131,34 @@ def tts_filter(
         ignore_brackets (bool): Whether to ignore text within brackets.
         ignore_parentheses (bool): Whether to ignore text within parentheses.
         ignore_asterisks (bool): Whether to ignore text within asterisks.
+        ignore_angle_brackets (bool): Whether to ignore text within angle brackets.
+        strip_markdown_formatting (bool): Whether to strip markdown formatting markers.
+        convert_units_to_spoken (bool): Whether to convert units to spoken Korean.
         translator (TranslateInterface, optional):
             The translator to use. If None, we'll skip the translation. Defaults to None.
 
     Returns:
         str: The filtered text.
     """
+    # Step 1: Strip markdown formatting (before filter_asterisks to preserve content)
+    if strip_markdown_formatting:
+        try:
+            text = strip_markdown(text)
+        except Exception as e:
+            logger.warning(f"Error stripping markdown: {e}")
+            logger.warning(f"Text: {text}")
+            logger.warning("Skipping...")
+
+    # Step 2: Convert units to spoken Korean (before remove_special_characters)
+    if convert_units_to_spoken:
+        try:
+            text = convert_units_to_spoken_korean(text)
+        except Exception as e:
+            logger.warning(f"Error converting units: {e}")
+            logger.warning(f"Text: {text}")
+            logger.warning("Skipping...")
+
+    # Step 3: Existing filters
     if ignore_asterisks:
         try:
             text = filter_asterisks(text)
