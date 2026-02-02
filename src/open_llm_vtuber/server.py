@@ -10,11 +10,18 @@ import os
 import shutil
 
 from fastapi import FastAPI
+from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
-from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
+from .routes import (
+    init_client_ws_route,
+    init_event_routes,
+    init_webtool_routes,
+    init_proxy_route,
+    init_debug_routes,
+)
 from .service_context import ServiceContext
 from .config_manager.utils import Config
 
@@ -33,6 +40,9 @@ class CORSStaticFiles(StarletteStaticFiles):
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "*"
+
+        # Prevent browser heuristic caching of static files
+        response.headers["Cache-Control"] = "no-cache"
 
         if path.endswith(".js"):
             response.headers["Content-Type"] = "application/javascript"
@@ -90,12 +100,29 @@ class WebSocketServer:
 
         # Include routes, passing the context instance
         # The context will be populated during the initialize step
-        self.app.include_router(
-            init_client_ws_route(default_context_cache=self.default_context_cache),
+        client_router, self.ws_handler = init_client_ws_route(
+            default_context_cache=self.default_context_cache,
         )
+        self.app.include_router(client_router)
+        self.app.include_router(init_event_routes(ws_handler=self.ws_handler))
         self.app.include_router(
             init_webtool_routes(default_context_cache=self.default_context_cache),
         )
+
+        # Debug routes for prompt monitoring
+        self.app.include_router(init_debug_routes())
+
+        # Register shutdown handler to close all MCP connections
+        @self.app.on_event("shutdown")
+        async def shutdown_event():
+            logger.info("Server shutting down — closing all client contexts...")
+            for client_uid, context in list(self.ws_handler.client_contexts.items()):
+                try:
+                    await context.close()
+                    logger.debug(f"Closed context for client {client_uid}")
+                except Exception as e:
+                    logger.warning(f"Error closing context for {client_uid}: {e}")
+            logger.info("All client contexts closed.")
 
         # Initialize and include proxy routes if proxy is enabled
         system_config = config.system_config
