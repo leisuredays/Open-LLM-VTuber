@@ -48,3 +48,44 @@ class ToolManager:
             return self._formatted_tools_openai
         elif mode == "Claude":
             return self._formatted_tools_claude
+
+    def register_builtin_tool(
+        self,
+        name: str,
+        description: str,
+        input_schema: Dict[str, Any],
+    ) -> None:
+        """Register a built-in tool (not backed by an MCP server).
+
+        The tool is added to both OpenAI and Claude formatted tool lists
+        and stored in self.tools with related_server='__builtin__'.
+        """
+        # Store in tools dict
+        self.tools[name] = FormattedTool(
+            input_schema=input_schema,
+            related_server="__builtin__",
+            description=description,
+        )
+
+        # OpenAI format
+        self._formatted_tools_openai.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": description,
+                    "parameters": input_schema,
+                },
+            }
+        )
+
+        # Claude format
+        self._formatted_tools_claude.append(
+            {
+                "name": name,
+                "description": description,
+                "input_schema": input_schema,
+            }
+        )
+
+        logger.info(f"Registered built-in tool: {name}")

@@ -1,13 +1,17 @@
 # config_manager/character.py
+from loguru import logger
 from pydantic import Field, field_validator
-from typing import Dict, ClassVar
+from typing import Dict, ClassVar, Optional
 from .i18n import I18nMixin, Description
 from .asr import ASRConfig
 from .tts import TTSConfig
 from .vad import VADConfig
 from .tts_preprocessor import TTSPreprocessorConfig
+from .rag import RagConfig
 
 from .agent import AgentConfig
+
+from prompts import prompt_loader
 
 
 class CharacterConfig(I18nMixin):
@@ -27,6 +31,7 @@ class CharacterConfig(I18nMixin):
     tts_preprocessor_config: TTSPreprocessorConfig = Field(
         ..., alias="tts_preprocessor_config"
     )
+    rag_config: Optional[RagConfig] = Field(default=None, alias="rag_config")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "conf_name": Description(
@@ -67,6 +72,10 @@ class CharacterConfig(I18nMixin):
         "avatar": Description(
             en="Avatar image path for the character", zh="角色头像图片路径"
         ),
+        "rag_config": Description(
+            en="Configuration for RAG (Retrieval-Augmented Generation)",
+            zh="RAG(검색 증강 생성) 구성",
+        ),
     }
 
     @field_validator("persona_prompt")
@@ -75,6 +84,13 @@ class CharacterConfig(I18nMixin):
             raise ValueError(
                 "Persona_prompt cannot be empty. Please provide a persona prompt."
             )
+        # Try loading from prompts/persona/{v}.txt if such a file exists
+        try:
+            content = prompt_loader.load_persona(v.strip())
+            logger.info(f"Loaded persona prompt from file: {v.strip()}.txt")
+            return content
+        except FileNotFoundError:
+            pass
         return v
 
     @field_validator("character_name")

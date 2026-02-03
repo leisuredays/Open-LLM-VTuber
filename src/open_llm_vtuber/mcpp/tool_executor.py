@@ -1,4 +1,5 @@
 import json
+import re
 import datetime
 from loguru import logger
 from typing import (
@@ -40,15 +41,18 @@ class ToolExecutor:
         if isinstance(call, ToolCallObject):
             tool_name = call.function.name
             tool_id = call.id
+            arguments = call.function.arguments
+            
+            # Sanitize malformed JSON from LLM (e.g., '{}{"command":"..."}')
+            arguments = self._sanitize_json_arguments(arguments)
+            
             try:
-                tool_input = json.loads(call.function.arguments)
+                tool_input = json.loads(arguments)
             except json.JSONDecodeError:
                 logger.error(
-                    f"Failed to decode OpenAI tool arguments for '{tool_name}'"
+                    f"Failed to decode OpenAI tool arguments for '{tool_name}': {arguments}"
                 )
-                result_content = (
-                    f"Error: Invalid arguments format for tool '{tool_name}'."
-                )
+                result_content = "도구 호출에 실패했습니다."
                 is_error = True
                 parse_error = True
         elif isinstance(call, dict):
@@ -64,16 +68,64 @@ class ToolExecutor:
 
             if not tool_id or not tool_name:
                 logger.error(f"Invalid Dict tool call structure: {call}")
-                result_content = "Error: Invalid tool call structure from LLM."
+                result_content = "도구 호출에 실패했습니다."
                 is_error = True
                 parse_error = True
         else:
             logger.error(f"Unsupported tool call type: {type(call)}")
-            result_content = "Error: Unsupported tool call type."
+            result_content = "도구 호출에 실패했습니다."
             is_error = True
             parse_error = True
 
         return tool_name, tool_id, tool_input, is_error, result_content, parse_error
+
+    def _sanitize_json_arguments(self, arguments: str) -> str:
+        """Sanitize malformed JSON arguments from LLM output.
+        
+        Handles patterns like:
+        - '{}{"command":"..."}' -> '{"command":"..."}'
+        - '{} {"command":"..."}' -> '{"command":"..."}'
+        - Extra whitespace or prefixes
+        
+        Args:
+            arguments: Raw JSON string from LLM tool call
+            
+        Returns:
+            Sanitized JSON string
+        """
+        if not arguments:
+            return "{}"
+        
+        arguments = arguments.strip()
+        
+        # Pattern 1: Handle '{}{"key":...}' or '{} {"key":...}'
+        # Find the last valid JSON object
+
+        # Try to find multiple JSON objects and take the last one with actual content
+        matches = list(re.finditer(r'\{', arguments))
+        
+        if len(matches) > 1:
+            # Multiple opening braces found, try to find valid JSON
+            # Check if starts with empty object followed by real object
+            if arguments.startswith('{}'):
+                rest = arguments[2:].strip()
+                if rest.startswith('{'):
+                    logger.warning(f"Sanitizing malformed JSON: '{arguments}' -> '{rest}'")
+                    return rest
+            
+            # Try parsing from each opening brace position
+            for match in matches:
+                try:
+                    substring = arguments[match.start():]
+                    # Try to parse this substring
+                    parsed = json.loads(substring)
+                    if parsed:  # Not empty
+                        logger.warning(f"Sanitizing malformed JSON: '{arguments}' -> '{substring}'")
+                        return substring
+                except json.JSONDecodeError:
+                    continue
+        
+        return arguments
 
     def format_tool_result(
         self,
@@ -93,8 +145,8 @@ class ToolExecutor:
                 # Simple text result
                 content_to_send = result_content
             elif not result_content and is_error:
-                # Error case, send error message as string
-                content_to_send = "Error occurred during tool execution."
+                # Error case, send sanitized error message
+                content_to_send = "도구를 일시적으로 사용할 수 없습니다."
             else:
                 # Fallback for empty or unexpected content
                 content_to_send = ""
@@ -272,7 +324,7 @@ class ToolExecutor:
                 "status": "error" if is_error else "completed",
                 "content": status_content
                 if not is_error
-                else f"Error: {text_content}",  # Use descriptive content or error message
+                else "도구를 일시적으로 사용할 수 없습니다.",  # Sanitized error message
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
                 + "Z",
             }
@@ -321,12 +373,15 @@ class ToolExecutor:
 
         if not tool_info:
             logger.error(f"Tool '{tool_name}' not found in ToolManager.")
-            text_content = f"Error: Tool '{tool_name}' is not available."
+            text_content = f"'{tool_name}' 도구를 사용할 수 없습니다."
             content_items = [{"type": "error", "text": text_content}]
             is_error = True
+        elif tool_info.related_server == "__builtin__":
+            # Handle built-in tools locally without MCP
+            return self._run_builtin_tool(tool_name, tool_id, tool_input)
         elif not tool_info.related_server:
             logger.error(f"Tool '{tool_name}' does not have a related server defined.")
-            text_content = f"Error: Configuration error for tool '{tool_name}'. No server specified."
+            text_content = f"'{tool_name}' 도구를 일시적으로 사용할 수 없습니다."
             content_items = [{"type": "error", "text": text_content}]
             is_error = True
         else:
@@ -344,7 +399,7 @@ class ToolExecutor:
                 if content_items and content_items[0].get("type") == "error":
                     is_error = True
                     text_content = content_items[0].get(
-                        "text", "Unknown error from tool execution."
+                        "text", "도구를 일시적으로 사용할 수 없습니다."
                     )
                 elif content_items and content_items[0].get("type") == "text":
                     text_content = content_items[0].get("text", "")
@@ -370,13 +425,31 @@ class ToolExecutor:
 
             except (ValueError, RuntimeError, ConnectionError) as e:
                 logger.exception(f"Error executing tool '{tool_name}': {e}")
-                text_content = f"Error executing tool '{tool_name}': {e}"
+                # Sanitize error message to avoid affecting LLM behavior
+                text_content = f"'{tool_name}' 도구를 일시적으로 사용할 수 없습니다."
                 content_items = [{"type": "error", "text": text_content}]
                 is_error = True
             except Exception as e:
                 logger.exception(f"Unexpected error executing tool '{tool_name}': {e}")
-                text_content = f"Unexpected error executing tool '{tool_name}': {e}"
+                # Sanitize error message to avoid affecting LLM behavior
+                text_content = f"'{tool_name}' 도구에 문제가 발생했습니다. 나중에 다시 시도해주세요."
                 content_items = [{"type": "error", "text": text_content}]
                 is_error = True
 
         return is_error, text_content, metadata, content_items
+
+    def _run_builtin_tool(
+        self, tool_name: str, tool_id: str, tool_input: Any
+    ) -> tuple[bool, str, Dict[str, Any], List[Dict[str, Any]]]:
+        """Handle built-in tools that don't require MCP server communication."""
+        if tool_name == "stay_silent":
+            logger.info(f"Built-in tool 'stay_silent' invoked (ID: {tool_id})")
+            return (False, "Silence acknowledged.", {}, [])
+
+        logger.error(f"Unknown built-in tool: '{tool_name}'")
+        return (
+            True,
+            f"Unknown built-in tool: '{tool_name}'",
+            {},
+            [{"type": "error", "text": f"Unknown built-in tool: '{tool_name}'"}],
+        )

@@ -1,1 +1,1 @@
-Please say something that would be engaging and appropriate for the current context.
+Please say something that would be engaging and appropriate for the current context. If you genuinely have nothing interesting or relevant to say right now, it is perfectly fine to stay silent by calling the `stay_silent` tool.

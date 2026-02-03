@@ -23,6 +23,8 @@ from .tts.tts_factory import TTSFactory
 from .vad.vad_factory import VADFactory
 from .agent.agent_factory import AgentFactory
 from .translate.translate_factory import TranslateFactory
+from .rag import RagEngine
+from .config_manager.rag import RagConfig
 
 from .config_manager import (
     Config,
@@ -61,6 +63,8 @@ class ServiceContext:
         self.mcp_client: MCPClient | None = None
         self.tool_executor: ToolExecutor | None = None
 
+        self.rag_engine: RagEngine | None = None
+
         # the system prompt is a combination of the persona prompt and live2d expression prompt
         self.system_prompt: str = None
 
@@ -92,7 +96,9 @@ class ServiceContext:
 
     # ==== Initializers
 
-    async def _init_mcp_components(self, use_mcpp, enabled_servers):
+    async def _init_mcp_components(
+        self, use_mcpp, enabled_servers, excluded_tools=None, llm_hidden_tools=None
+    ):
         """Initializes MCP components based on configuration, dynamically fetching tool info."""
         logger.debug(
             f"Initializing MCP components: use_mcpp={use_mcpp}, enabled_servers={enabled_servers}"
@@ -124,7 +130,10 @@ class ServiceContext:
                     mcp_prompt_string,
                     openai_tools,
                     claude_tools,
-                ) = await self.tool_adapter.get_tools(enabled_servers)
+                    raw_tools_dict,
+                ) = await self.tool_adapter.get_tools(
+                    enabled_servers, excluded_tools, llm_hidden_tools
+                )
                 # Store the generated prompt string
                 self.mcp_prompt = mcp_prompt_string
                 logger.info(
@@ -135,10 +144,6 @@ class ServiceContext:
                 )
 
                 # 3. Initialize ToolManager with the fetched formatted tools
-
-                _, raw_tools_dict = await self.tool_adapter.get_server_and_tool_info(
-                    enabled_servers
-                )
                 self.tool_manager = ToolManager(
                     formatted_tools_openai=openai_tools,
                     formatted_tools_claude=claude_tools,
@@ -187,6 +192,28 @@ class ServiceContext:
                 "MCP components not initialized (use_mcpp is False or no enabled servers)."
             )
 
+        # Register built-in tools (available whenever ToolManager exists)
+        if self.tool_manager:
+            self.tool_manager.register_builtin_tool(
+                name="stay_silent",
+                description=(
+                    "Call this tool when you decide to stay silent and not respond. "
+                    "Use it when the user's message is a simple acknowledgement "
+                    "(e.g. 'ok', 'yeah', 'ㅇㅇ', 'ㅇㅋ') or when continuing to speak "
+                    "would feel forced or unnatural."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "reason": {
+                            "type": "string",
+                            "description": "Brief reason for choosing silence",
+                        }
+                    },
+                    "required": [],
+                },
+            )
+
     async def close(self):
         """Clean up resources, especially the MCPClient."""
         logger.info("Closing ServiceContext resources...")
@@ -194,6 +221,9 @@ class ServiceContext:
             logger.info(f"Closing MCPClient for context instance {id(self)}...")
             await self.mcp_client.aclose()
             self.mcp_client = None
+        # RAG engine is shared across sessions; do not close it here.
+        # It will be managed at the server/default_context_cache level.
+        self.rag_engine = None
         if self.agent_engine and hasattr(self.agent_engine, "close"):
             await self.agent_engine.close()  # Ensure agent resources are also closed
         logger.info("ServiceContext closed.")
@@ -211,6 +241,7 @@ class ServiceContext:
         translate_engine: TranslateInterface | None,
         mcp_server_registery: ServerRegistry | None = None,
         tool_adapter: ToolAdapter | None = None,
+        rag_engine: RagEngine | None = None,
         send_text: Callable = None,
         client_uid: str = None,
     ) -> None:
@@ -235,6 +266,7 @@ class ServiceContext:
         # Load potentially shared components by reference
         self.mcp_server_registery = mcp_server_registery
         self.tool_adapter = tool_adapter
+        self.rag_engine = rag_engine
         self.send_text = send_text
         self.client_uid = client_uid
 
@@ -242,6 +274,8 @@ class ServiceContext:
         await self._init_mcp_components(
             self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
             self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
+            self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_excluded_tools,
+            self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_llm_hidden_tools,
         )
 
         logger.debug(f"Loaded service context with cache: {character_config}")
@@ -290,10 +324,18 @@ class ServiceContext:
             logger.info("Initializing shared ToolAdapter within load_from_config.")
             self.tool_adapter = ToolAdapter(server_registery=self.mcp_server_registery)
 
+        # init rag from character config
+        await self.init_rag(
+            config.character_config.rag_config,
+            config.character_config.conf_uid,
+        )
+
         # Initialize MCP Components before initializing Agent
         await self._init_mcp_components(
             config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
             config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
+            config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_excluded_tools,
+            config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_llm_hidden_tools,
         )
 
         # init agent from character config
@@ -361,6 +403,28 @@ class ServiceContext:
         else:
             logger.info("VAD already initialized with the same config.")
 
+    async def init_rag(self, rag_config: RagConfig | None, conf_uid: str) -> None:
+        """Initialize or update the RAG engine based on configuration."""
+        if not rag_config or not rag_config.enabled:
+            self.rag_engine = None
+            return
+
+        if (
+            self.rag_engine
+            and self.rag_engine.config == rag_config
+            and self.rag_engine.conf_uid == conf_uid
+        ):
+            logger.debug("RAG engine already initialized with the same config.")
+            return
+
+        logger.info(f"Initializing RAG engine for '{conf_uid}'")
+        engine = RagEngine(config=rag_config, conf_uid=conf_uid)
+        success = await engine.initialize()
+        if success:
+            self.rag_engine = engine
+        else:
+            self.rag_engine = None
+
     async def init_agent(self, agent_config: AgentConfig, persona_prompt: str) -> None:
         """Initialize or update the LLM engine based on agent configuration."""
         logger.info(f"Initializing Agent: {agent_config.conversation_agent_choice}")
@@ -391,6 +455,7 @@ class ServiceContext:
                 tool_manager=self.tool_manager,
                 tool_executor=self.tool_executor,
                 mcp_prompt_string=self.mcp_prompt,
+                rag_engine=self.rag_engine,
             )
 
             logger.debug(f"Agent choice: {agent_config.conversation_agent_choice}")
@@ -445,6 +510,8 @@ class ServiceContext:
         """
         logger.debug(f"constructing persona_prompt: '''{persona_prompt}'''")
 
+        tool_prompt_sections = []
+
         for prompt_name, prompt_file in self.system_config.tool_prompts.items():
             if (
                 prompt_name == "group_conversation_prompt"
@@ -462,12 +529,18 @@ class ServiceContext:
             if prompt_name == "mcp_prompt":
                 continue
 
-            persona_prompt += prompt_content
+            tool_prompt_sections.append(prompt_content)
+
+        # Assemble: persona first, then functional rules with clear separator
+        system_prompt = persona_prompt
+        if tool_prompt_sections:
+            system_prompt += "\n\n---\n"
+            system_prompt += "\n".join(tool_prompt_sections)
 
         logger.debug("\n === System Prompt ===")
-        logger.debug(persona_prompt)
+        logger.debug(system_prompt)
 
-        return persona_prompt
+        return system_prompt
 
     async def handle_config_switch(
         self,

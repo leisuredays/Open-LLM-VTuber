@@ -241,7 +241,14 @@ async def handle_group_member_turn(
     await broadcast_thinking_state(broadcast_func, group_members)
 
     context = client_contexts[current_member_uid]
-    current_ws_send = client_connections[current_member_uid].send_text
+    raw_ws_send = client_connections[current_member_uid].send_text
+
+    # Serialize all WebSocket writes to prevent concurrent send errors
+    ws_lock = asyncio.Lock()
+
+    async def locked_ws_send(data: str) -> None:
+        async with ws_lock:
+            await raw_ws_send(data)
 
     new_messages = state.conversation_history[state.memory_index[current_member_uid] :]
     new_context = "\n".join(new_messages) if new_messages else ""
@@ -258,18 +265,33 @@ async def handle_group_member_turn(
         f"(client {current_member_uid}) receiving context:\n{new_context}"
     )
 
-    full_response = await process_member_response(
+    full_response, stay_silent_called = await process_member_response(
         context=context,
         batch_input=batch_input,
-        current_ws_send=current_ws_send,
+        current_ws_send=locked_ws_send,
         tts_manager=tts_manager,
         broadcast_func=broadcast_func,
         group_members=group_members,
     )
 
+    # Silence gate: if LLM called stay_silent tool, skip TTS and history
+    if stay_silent_called:
+        logger.info(
+            f"🤫 Silence detected: {context.character_config.character_name} called stay_silent tool"
+        )
+        chain_end_msg = {"type": "control", "text": "conversation-chain-end"}
+        await locked_ws_send(json.dumps(chain_end_msg))
+        if broadcast_func and group_members:
+            await broadcast_func(group_members, chain_end_msg, current_member_uid)
+        state.memory_index[current_member_uid] = len(state.conversation_history)
+        state.group_queue.append(current_member_uid)
+        state.current_speaker_uid = None
+        return
+
+    # Wait for TTS tasks and drain the payload queue before sending follow-up messages
     if tts_manager.task_list:
         await asyncio.gather(*tts_manager.task_list)
-        await current_ws_send(json.dumps({"type": "backend-synth-complete"}))
+        await tts_manager.drain()
 
         broadcast_ctx = BroadcastContext(
             broadcast_func=broadcast_func,
@@ -279,7 +301,7 @@ async def handle_group_member_turn(
 
         await finalize_conversation_turn(
             tts_manager=tts_manager,
-            websocket_send=current_ws_send,
+            websocket_send=locked_ws_send,
             client_uid=current_member_uid,
             broadcast_ctx=broadcast_ctx,
         )
@@ -345,9 +367,14 @@ async def process_member_response(
     tts_manager: TTSTaskManager,
     broadcast_func: Optional[BroadcastFunc] = None,
     group_members: Optional[List[str]] = None,
-) -> str:
-    """Process group member's response, handling text/audio and tool status events."""
+) -> tuple[str, bool]:
+    """Process group member's response, handling text/audio and tool status events.
+
+    Returns:
+        tuple: (full_response, stay_silent_called)
+    """
     full_response = ""
+    stay_silent_called = False
 
     try:
         # agent.chat now yields Union[SentenceOutput, Dict[str, Any]]
@@ -358,6 +385,13 @@ async def process_member_response(
                 isinstance(output_item, dict)
                 and output_item.get("type") == "tool_call_status"
             ):
+                # Detect stay_silent tool call
+                if (
+                    output_item.get("tool_name") == "stay_silent"
+                    and output_item.get("status") == "completed"
+                ):
+                    stay_silent_called = True
+
                 if broadcast_func and group_members:
                     logger.debug(f"Broadcasting tool status update: {output_item}")
                     output_item["name"] = context.character_config.character_name
@@ -391,4 +425,4 @@ async def process_member_response(
             )
         )
 
-    return full_response
+    return full_response, stay_silent_called

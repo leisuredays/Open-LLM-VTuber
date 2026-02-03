@@ -48,15 +48,24 @@ async def process_single_conversation(
     # Create TTSTaskManager for this conversation
     tts_manager = TTSTaskManager()
     full_response = ""  # Initialize full_response here
+    stay_silent_called = False  # Track if LLM invoked stay_silent tool
+
+    # Serialize all WebSocket writes to prevent concurrent send errors
+    # (the websockets library does not support concurrent writes)
+    ws_lock = asyncio.Lock()
+
+    async def locked_websocket_send(data: str) -> None:
+        async with ws_lock:
+            await websocket_send(data)
 
     try:
         # Send initial signals
-        await send_conversation_start_signals(websocket_send)
+        await send_conversation_start_signals(locked_websocket_send)
         logger.info(f"New Conversation Chain {session_emoji} started!")
 
         # Process user input
         input_text = await process_user_input(
-            user_input, context.asr_engine, websocket_send
+            user_input, context.asr_engine, locked_websocket_send
         )
 
         # Create batch input
@@ -94,11 +103,18 @@ async def process_single_conversation(
                     isinstance(output_item, dict)
                     and output_item.get("type") == "tool_call_status"
                 ):
+                    # Detect stay_silent tool call
+                    if (
+                        output_item.get("tool_name") == "stay_silent"
+                        and output_item.get("status") == "completed"
+                    ):
+                        stay_silent_called = True
+
                     # Handle tool status event: send WebSocket message
                     output_item["name"] = context.character_config.character_name
                     logger.debug(f"Sending tool status update: {output_item}")
 
-                    await websocket_send(json.dumps(output_item))
+                    await locked_websocket_send(json.dumps(output_item))
 
                 elif isinstance(output_item, (SentenceOutput, AudioOutput)):
                     # Handle SentenceOutput or AudioOutput
@@ -107,7 +123,7 @@ async def process_single_conversation(
                         character_config=context.character_config,
                         live2d_model=context.live2d_model,
                         tts_engine=context.tts_engine,
-                        websocket_send=websocket_send,  # Pass websocket_send for audio/tts messages
+                        websocket_send=locked_websocket_send,
                         tts_manager=tts_manager,
                         translate_engine=context.translate_engine,
                     )
@@ -126,7 +142,7 @@ async def process_single_conversation(
             logger.exception(
                 f"Error processing agent response stream: {e}"
             )  # Log with stack trace
-            await websocket_send(
+            await locked_websocket_send(
                 json.dumps(
                     {
                         "type": "error",
@@ -137,14 +153,24 @@ async def process_single_conversation(
             # full_response will contain partial response before error
         # --- End processing agent response ---
 
-        # Wait for any pending TTS tasks
+        # Silence gate: if LLM called stay_silent tool, skip TTS and history
+        if stay_silent_called:
+            logger.info(
+                f"🤫 Silence detected {session_emoji}: LLM called stay_silent tool"
+            )
+            await locked_websocket_send(
+                json.dumps({"type": "control", "text": "conversation-chain-end"})
+            )
+            return ""
+
+        # Wait for any pending TTS tasks and drain the payload queue
         if tts_manager.task_list:
             await asyncio.gather(*tts_manager.task_list)
-            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
+            await tts_manager.drain()
 
         await finalize_conversation_turn(
             tts_manager=tts_manager,
-            websocket_send=websocket_send,
+            websocket_send=locked_websocket_send,
             client_uid=client_uid,
         )
 
@@ -165,8 +191,8 @@ async def process_single_conversation(
         logger.info(f"🤡👍 Conversation {session_emoji} cancelled because interrupted.")
         raise
     except Exception as e:
-        logger.error(f"Error in conversation chain: {e}")
-        await websocket_send(
+        logger.exception(f"Error in conversation chain: {e}")
+        await locked_websocket_send(
             json.dumps({"type": "error", "message": f"Conversation error: {str(e)}"})
         )
         raise
