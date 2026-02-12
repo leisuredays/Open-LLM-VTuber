@@ -1,0 +1,324 @@
+{
+  "SwitchMode": 0,
+  "RemoveAllExpKeys": [
+    0,
+    0,
+    0
+  ],
+  "MotionShortcutKeyDatas": {
+    "motion/1.motion3.json": {
+      "MotionName": "motion/1.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/2.motion3.json": {
+      "MotionName": "motion/2.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/3.motion3.json": {
+      "MotionName": "motion/3.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/4.motion3.json": {
+      "MotionName": "motion/4.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/5.motion3.json": {
+      "MotionName": "motion/5.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/6.motion3.json": {
+      "MotionName": "motion/6.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/7.motion3.json": {
+      "MotionName": "motion/7.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/8.motion3.json": {
+      "MotionName": "motion/8.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/9.motion3.json": {
+      "MotionName": "motion/9.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/A2-1.motion3.json": {
+      "MotionName": "motion/A2-1.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/A2-2.motion3.json": {
+      "MotionName": "motion/A2-2.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    },
+    "motion/A2-3.motion3.json": {
+      "MotionName": "motion/A2-3.motion3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "PlayMaxTime": 0.0,
+      "Mode": 0,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "FadeDuration": 0.5
+    }
+  },
+  "ExpShortcutKeyDatas": {
+    "expression/angry.exp3.json": {
+      "ExpName": "expression/angry.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        49,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/angry_0.exp3.json": {
+      "ExpName": "expression/angry_0.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        50,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/cry.exp3.json": {
+      "ExpName": "expression/cry.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        51,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/eye_heart.exp3.json": {
+      "ExpName": "expression/eye_heart.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        54,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/eye_star.exp3.json": {
+      "ExpName": "expression/eye_star.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        53,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/eye_white.exp3.json": {
+      "ExpName": "expression/eye_white.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        52,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/hair.exp3.json": {
+      "ExpName": "expression/hair.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        55,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/halo.exp3.json": {
+      "ExpName": "expression/halo.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/hand1.exp3.json": {
+      "ExpName": "expression/hand1.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        56,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/hand2.exp3.json": {
+      "ExpName": "expression/hand2.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/sad.exp3.json": {
+      "ExpName": "expression/sad.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        51,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/sleep.exp3.json": {
+      "ExpName": "expression/sleep.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        57,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    },
+    "expression/wing.exp3.json": {
+      "ExpName": "expression/wing.exp3.json",
+      "IsEnable": true,
+      "IsGlobal": true,
+      "Keys": [
+        0,
+        0,
+        0
+      ],
+      "Mode": 1,
+      "FadeDuration": 0.5
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "dianzi.moc3",
+		"Textures": [
+			"dianzi.2048/texture_00.png",
+			"dianzi.2048/texture_01.png",
+			"dianzi.2048/texture_02.png",
+			"dianzi.2048/texture_03.png"
+		],
+		"Physics": "dianzi.physics3.json",
+		"DisplayInfo": "dianzi.cdi3.json",
+		"Expressions": [
+			{
+				"Name": "angry",
+				"File": "expression/angry.exp3.json"
+			},
+			{
+				"Name": "angry_0",
+				"File": "expression/angry_0.exp3.json"
+			},
+			{
+				"Name": "cry",
+				"File": "expression/cry.exp3.json"
+			},
+			{
+				"Name": "eye_heart",
+				"File": "expression/eye_heart.exp3.json"
+			},
+			{
+				"Name": "eye_star",
+				"File": "expression/eye_star.exp3.json"
+			},
+			{
+				"Name": "eye_white",
+				"File": "expression/eye_white.exp3.json"
+			},
+			{
+				"Name": "hair",
+				"File": "expression/hair.exp3.json"
+			},
+			{
+				"Name": "halo",
+				"File": "expression/halo.exp3.json"
+			},
+			{
+				"Name": "hand1",
+				"File": "expression/hand1.exp3.json"
+			},
+			{
+				"Name": "hand2",
+				"File": "expression/hand2.exp3.json"
+			},
+			{
+				"Name": "sad",
+				"File": "expression/sad.exp3.json"
+			},
+			{
+				"Name": "sleep",
+				"File": "expression/sleep.exp3.json"
+			},
+			{
+				"Name": "wing",
+				"File": "expression/wing.exp3.json"
+			}
+		],
+		"Motions": {
+			"Idle": [
+				{
+					"File": "motion/idle_scaled.motion3.json"
+				}
+			],
+			"": [
+				{
+					"File": "motion/2.motion3.json"
+				},
+				{
+					"File": "motion/3.motion3.json"
+				},
+				{
+					"File": "motion/4.motion3.json"
+				},
+				{
+					"File": "motion/5.motion3.json"
+				},
+				{
+					"File": "motion/6.motion3.json"
+				},
+				{
+					"File": "motion/7.motion3.json"
+				},
+				{
+					"File": "motion/8.motion3.json"
+				},
+				{
+					"File": "motion/9.motion3.json"
+				},
+				{
+					"File": "motion/A2-1.motion3.json"
+				},
+				{
+					"File": "motion/A2-2.motion3.json"
+				},
+				{
+					"File": "motion/A2-3.motion3.json"
+				}
+			]
+		}
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": []
+		},
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": []
+		}
+	]
+}
