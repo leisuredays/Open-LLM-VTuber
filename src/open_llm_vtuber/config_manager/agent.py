@@ -27,12 +27,17 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "deepseek_llm",
         "groq_llm",
         "mistral_llm",
+        "dify_llm",
     ] = Field(..., alias="llm_provider")
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
+    mcp_excluded_tools: Optional[List[str]] = Field([], alias="mcp_excluded_tools")
+    mcp_llm_hidden_tools: Optional[List[str]] = Field(
+        ["get_mode_context_prompt"], alias="mcp_llm_hidden_tools"
+    )
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "llm_provider": Description(
@@ -54,6 +59,14 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "mcp_enabled_servers": Description(
             en="List of MCP servers to enable for the agent",
             zh="为智能体启用 MCP 服务器列表",
+        ),
+        "mcp_excluded_tools": Description(
+            en="List of MCP tool names to exclude from the agent",
+            zh="智能体에서 제외할 MCP 도구 이름 목록",
+        ),
+        "mcp_llm_hidden_tools": Description(
+            en="List of MCP tool names hidden from LLM but available for internal use",
+            zh="LLM에는 숨기지만 내부적으로 사용 가능한 MCP 도구 이름 목록",
         ),
     }
 

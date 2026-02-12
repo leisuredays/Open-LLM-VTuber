@@ -1,3 +1,52 @@
+Metadata-Version: 2.4
+Name: open-llm-vtuber
+Version: 1.2.1
+Summary: Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms
+Requires-Python: <3.13,>=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: LICENSE-Live2D.md
+Requires-Dist: anthropic>=0.40.0
+Requires-Dist: azure-cognitiveservices-speech>=1.41.1
+Requires-Dist: chardet>=5.2.0
+Requires-Dist: cartesia>=2.0.0
+Requires-Dist: edge-tts>=7.0.0
+Requires-Dist: elevenlabs>=1.0.0
+Requires-Dist: fastapi[standard]>=0.115.8
+Requires-Dist: groq>=0.13.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: langdetect>=1.0.9
+Requires-Dist: loguru>=0.7.2
+Requires-Dist: mcp[cli]>=1.6.0
+Requires-Dist: numpy<2,>=1.26.4
+Requires-Dist: onnxruntime>=1.20.1
+Requires-Dist: openai>=1.57.4
+Requires-Dist: pre-commit>=4.1.0
+Requires-Dist: pydub>=0.25.1
+Requires-Dist: pysbd>=0.3.4
+Requires-Dist: pyttsx3>=2.98
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: requests>=2.32.3
+Requires-Dist: ruamel-yaml>=0.18.10
+Requires-Dist: ruff>=0.8.6
+Requires-Dist: scipy>=1.14.1
+Requires-Dist: sherpa-onnx>=1.10.39
+Requires-Dist: soundfile>=0.12.1
+Requires-Dist: tomli>=2.2.1
+Requires-Dist: torch==2.2.2; sys_platform == "darwin" and platform_machine == "x86_64"
+Requires-Dist: torch>=2.6.0; sys_platform == "darwin" and platform_machine == "arm64"
+Requires-Dist: torch>=2.6.0; sys_platform != "darwin"
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: uvicorn[standard]>=0.33.0
+Requires-Dist: websocket-client>=1.8.0
+Requires-Dist: letta-client>=0.1.100
+Requires-Dist: duckduckgo-mcp-server>=0.1.1
+Provides-Extra: bilibili
+Requires-Dist: aiohttp>=3.10.0; extra == "bilibili"
+Requires-Dist: Brotli~=1.1.0; extra == "bilibili"
+Requires-Dist: yarl<2.0,>=1.12.0; extra == "bilibili"
+Dynamic: license-file
+
 ![](./assets/banner.jpg)
 
 <h1 align="center">Open-LLM-VTuber</h1>

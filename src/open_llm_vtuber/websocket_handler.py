@@ -29,6 +29,24 @@ from .conversations.conversation_handler import (
 )
 
 
+async def _trigger_summary_if_needed(context: "ServiceContext") -> None:
+    """Trigger conversation summary generation if conditions are met."""
+    if not context.rag_engine:
+        return
+    if not context.history_uid:
+        return
+    if not context.rag_engine.config.summarization_model:
+        return
+    history = get_history(context.character_config.conf_uid, context.history_uid)
+    if len(history) < context.rag_engine.config.min_messages_for_summary:
+        return
+    if context.rag_engine.has_summary(context.history_uid):
+        return
+    asyncio.create_task(
+        context.rag_engine.generate_and_store_summary(context.history_uid, history)
+    )
+
+
 class MessageType(Enum):
     """Enum for WebSocket message types"""
 
@@ -89,6 +107,7 @@ class WebSocketHandler:
             "raw-audio-data": self._handle_raw_audio_data,
             "text-input": self._handle_conversation_trigger,
             "ai-speak-signal": self._handle_conversation_trigger,
+            "minecraft-event": self._handle_conversation_trigger,
             "fetch-configs": self._handle_fetch_configs,
             "switch-config": self._handle_config_switch,
             "fetch-backgrounds": self._handle_fetch_backgrounds,
@@ -196,6 +215,7 @@ class WebSocketHandler:
             translate_engine=self.default_context_cache.translate_engine,
             mcp_server_registery=self.default_context_cache.mcp_server_registery,
             tool_adapter=self.default_context_cache.tool_adapter,
+            rag_engine=self.default_context_cache.rag_engine,
             send_text=send_text,
             client_uid=client_uid,
         )
@@ -297,6 +317,15 @@ class WebSocketHandler:
             send_group_update=self.send_group_update,
         )
 
+        # Trigger summary before closing context
+        context = self.client_contexts.get(client_uid)
+        if context:
+            await _trigger_summary_if_needed(context)
+
+        # Close context first to clean up resources (e.g., MCPClient)
+        if context:
+            await context.close()
+
         # Clean up other client data
         self.client_connections.pop(client_uid, None)
         self.client_contexts.pop(client_uid, None)
@@ -306,11 +335,6 @@ class WebSocketHandler:
             if task and not task.done():
                 task.cancel()
             self.current_conversation_tasks.pop(client_uid, None)
-
-        # Call context close to clean up resources (e.g., MCPClient)
-        context = self.client_contexts.get(client_uid)
-        if context:
-            await context.close()
 
         logger.info(f"Client {client_uid} disconnected")
         message_handler.cleanup_client(client_uid)
@@ -410,6 +434,8 @@ class WebSocketHandler:
             return
 
         context = self.client_contexts[client_uid]
+        # Trigger summary for current history before switching
+        await _trigger_summary_if_needed(context)
         # Update history_uid in service context
         context.history_uid = history_uid
         context.agent_engine.set_memory_from_history(
@@ -434,6 +460,8 @@ class WebSocketHandler:
     ) -> None:
         """Handle creation of new chat history"""
         context = self.client_contexts[client_uid]
+        # Trigger summary for current history before switching
+        await _trigger_summary_if_needed(context)
         history_uid = create_new_history(context.character_config.conf_uid)
         if history_uid:
             context.history_uid = history_uid
@@ -491,24 +519,47 @@ class WebSocketHandler:
     ) -> None:
         """Handle incoming raw audio data for VAD processing"""
         context = self.client_contexts[client_uid]
+        if context.vad_engine is None:
+            logger.warning(f"[VAD] vad_engine is None for client {client_uid}, skipping raw audio")
+            return
         chunk = data.get("audio", [])
-        if chunk:
-            for audio_bytes in context.vad_engine.detect_speech(chunk):
-                if audio_bytes == b"<|PAUSE|>":
-                    await websocket.send_text(
-                        json.dumps({"type": "control", "text": "interrupt"})
-                    )
-                elif audio_bytes == b"<|RESUME|>":
-                    pass
-                elif len(audio_bytes) > 1024:
-                    # Detected audio activity (voice)
-                    self.received_data_buffers[client_uid] = np.append(
-                        self.received_data_buffers[client_uid],
-                        np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32),
-                    )
-                    await websocket.send_text(
-                        json.dumps({"type": "control", "text": "mic-audio-end"})
-                    )
+        if not chunk:
+            logger.debug(f"[VAD] Received empty audio chunk from client {client_uid}")
+            return
+
+        # Log periodically (every ~1s = ~50 chunks at 20ms)
+        if not hasattr(self, "_raw_audio_count"):
+            self._raw_audio_count = {}
+        self._raw_audio_count.setdefault(client_uid, 0)
+        self._raw_audio_count[client_uid] += 1
+        if self._raw_audio_count[client_uid] % 50 == 1:
+            max_amp = max(abs(s) for s in chunk) if chunk else 0
+            logger.debug(
+                f"[VAD] Received raw-audio-data #{self._raw_audio_count[client_uid]} "
+                f"from client {client_uid}: {len(chunk)} samples, max_amplitude={max_amp:.4f}"
+            )
+
+        for audio_bytes in context.vad_engine.detect_speech(chunk):
+            if audio_bytes == b"<|PAUSE|>":
+                logger.info(f"[VAD] Speech START detected for client {client_uid} → sending interrupt")
+                await websocket.send_text(
+                    json.dumps({"type": "control", "text": "interrupt"})
+                )
+            elif audio_bytes == b"<|RESUME|>":
+                logger.info(f"[VAD] Speech END detected for client {client_uid}")
+            elif len(audio_bytes) > 1024:
+                # Detected audio activity (voice)
+                logger.info(
+                    f"[VAD] Voice audio chunk for client {client_uid}: "
+                    f"{len(audio_bytes)} bytes → triggering conversation"
+                )
+                self.received_data_buffers[client_uid] = np.append(
+                    self.received_data_buffers[client_uid],
+                    np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32),
+                )
+                await websocket.send_text(
+                    json.dumps({"type": "control", "text": "mic-audio-end"})
+                )
 
     async def _handle_conversation_trigger(
         self, websocket: WebSocket, client_uid: str, data: WSMessage

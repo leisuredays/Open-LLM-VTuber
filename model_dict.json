@@ -26,5 +26,27 @@
                 "": 1
             }
         }
+    },
+    {
+        "name": "mashiro",
+        "description": "Mashiro Live2D Model",
+        "url": "/live2d-models/mashiro/mashiro.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": -1,
+            "angry": 0,
+            "annoyed": 1,
+            "cry": 2,
+            "love": 3,
+            "excited": 4,
+            "shocked": 5,
+            "sad": 10,
+            "sleepy": 11
+        },
+        "tapMotions": {}
     }
 ]

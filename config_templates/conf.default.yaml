@@ -22,8 +22,11 @@ system_config:
     proactive_speak_prompt: 'proactive_speak_prompt'
     # Prompt to enhance the LLM's ability to output speakable text
     speakable_prompt: 'speakable_prompt'
+    # Enable silence_prompt to allow the LLM to choose silence when it has nothing meaningful to say.
+    # When enabled, the LLM can respond with only <think> tags to stay silent, skipping TTS and history storage.
+    # silence_prompt: 'silence_prompt'
     # Additional guidance for LLM on how to use tools
-    # tool_guidance_prompt: 'tool_guidance_prompt' 
+    # tool_guidance_prompt: 'tool_guidance_prompt'
 
 # configuration for the default character
 character_config:
@@ -493,6 +496,23 @@ character_config:
         source_lang: 'zh'
         target_lang: 'ja'
 
+  # RAG (Retrieval-Augmented Generation) configuration
+  # Requires Ollama running for embeddings and ChromaDB for vector storage
+  rag_config:
+    enabled: False
+    ollama_base_url: 'http://localhost:11434'
+    embedding_model: 'bge-m3'
+    summarization_model: ''
+    summarization_base_url: 'http://localhost:11434/v1'
+    summarization_api_key: ''
+    knowledge_dir: 'data/knowledge'
+    n_results: 3
+    min_messages_for_summary: 6
+    chunk_size: 500
+    chunk_overlap: 100
+    semantic_weight: 0.7       # Semantic 0.7 + Keyword 0.3
+    score_threshold: 0.0       # 0.0 disables filtering
+
 # Live Streaming Integration
 live_config:
   bilibili_live:
@@ -500,3 +520,14 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie value (optional, for authenticated requests)
     sessdata: ""
+
+  discord_live:
+    # Discord bot token from https://discord.com/developers/applications
+    bot_token: ""
+    # List of Discord channel IDs to listen on (empty list = all channels)
+    channel_ids: []
+    # Command prefix to trigger the bot (empty string = respond to all messages)
+    prefix: ""
+    # Enable voice channel support (join/leave commands, TTS audio playback)
+    # Requires: uv sync --extra discord, plus ffmpeg and libopus installed on the system
+    voice_enabled: false

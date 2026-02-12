@@ -55,6 +55,9 @@ class MCPClient:
             )
 
         timeout = server.timeout if server.timeout else DEFAULT_TIMEOUT
+        # Ensure timeout is a timedelta (JSON config may provide int/float seconds)
+        if isinstance(timeout, (int, float)):
+            timeout = timedelta(seconds=timeout)
 
         server_params = StdioServerParameters(
             command=server.command, args=server.args, env=server.env, cwd=server.cwd
@@ -70,6 +73,17 @@ class MCPClient:
                 ClientSession(read, write, read_timeout_seconds=timeout)
             )
             await session.initialize()
+
+            # Pre-populate the session's _tool_output_schemas cache so that
+            # MCP SDK 1.25+'s _validate_tool_result won't need to call
+            # list_tools() after every call_tool() (which can time out on
+            # long-running tools over STDIO transport).
+            try:
+                await session.list_tools()
+            except Exception as e:
+                logger.warning(
+                    f"MCPC: Failed to pre-cache tool schemas for '{server_name}': {e}"
+                )
 
             self.active_sessions[server_name] = session
             logger.info(f"MCPC: Successfully connected to server '{server_name}'.")
@@ -117,10 +131,11 @@ class MCPClient:
                 else "Unknown server error"
             )
             logger.error(f"MCPC: Error calling tool '{tool_name}': {error_text}")
-            # Return error information within the standard structure
+            # Return sanitized error to avoid affecting LLM behavior
+            sanitized_error = f"'{tool_name}' 도구를 일시적으로 사용할 수 없습니다."
             return {
                 "metadata": getattr(response, "metadata", {}),
-                "content_items": [{"type": "error", "text": error_text}],
+                "content_items": [{"type": "error", "text": sanitized_error}],
             }
 
         content_items = []

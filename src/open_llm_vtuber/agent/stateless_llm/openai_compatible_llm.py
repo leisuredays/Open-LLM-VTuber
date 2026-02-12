@@ -30,6 +30,7 @@ class AsyncLLM(StatelessLLMInterface):
         organization_id: str = "z",
         project_id: str = "z",
         temperature: float = 1.0,
+        max_tokens: int = None,
     ):
         """
         Initializes an instance of the `AsyncLLM` class.
@@ -41,10 +42,13 @@ class AsyncLLM(StatelessLLMInterface):
         - project_id (str, optional): The project ID for the OpenAI API. Defaults to "z".
         - llm_api_key (str, optional): The API key for the OpenAI API. Defaults to "z".
         - temperature (float, optional): What sampling temperature to use, between 0 and 2. Defaults to 1.0.
+        - max_tokens (int, optional): Maximum number of tokens to generate. Defaults to None (no limit).
         """
         self.base_url = base_url
         self.model = model
         self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.extra_body = None
         self.client = AsyncOpenAI(
             base_url=base_url,
             organization=organization_id,
@@ -54,7 +58,7 @@ class AsyncLLM(StatelessLLMInterface):
         self.support_tools = True
 
         logger.info(
-            f"Initialized AsyncLLM with the parameters: {self.base_url}, {self.model}"
+            f"Initialized AsyncLLM with the parameters: {self.base_url}, {self.model}, max_tokens={self.max_tokens}"
         )
 
     async def chat_completion(
@@ -96,6 +100,9 @@ class AsyncLLM(StatelessLLMInterface):
             logger.debug(f"Messages: {messages_with_system}")
 
             available_tools = tools if self.support_tools else NOT_GIVEN
+            max_tokens_param = self.max_tokens if self.max_tokens else NOT_GIVEN
+
+            extra_body_param = self.extra_body if self.extra_body else NOT_GIVEN
 
             stream: AsyncStream[
                 ChatCompletionChunk
@@ -105,6 +112,8 @@ class AsyncLLM(StatelessLLMInterface):
                 stream=True,
                 temperature=self.temperature,
                 tools=available_tools,
+                max_tokens=max_tokens_param,
+                extra_body=extra_body_param,
             )
             logger.debug(
                 f"Tool Support: {self.support_tools}, Available tools: {available_tools}"

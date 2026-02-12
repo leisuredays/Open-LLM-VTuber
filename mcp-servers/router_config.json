@@ -1,0 +1,35 @@
+{
+  "bot_name": "andy",
+  "mindserver": {
+    "host": "localhost",
+    "port": 8080
+  },
+  "minecraft": {
+    "host": "localhost",
+    "port": 25565
+  },
+  "minecraft_server": {
+    "enabled": true,
+    "name": "minecraft-server",
+    "command": ["java", "-Xms2G", "-Xmx4G", "-jar", "paper.jar", "--nogui"],
+    "working_dir": "/home/leisuredays/mindcraft/paper_server",
+    "host": "localhost",
+    "port": 25565,
+    "startup_timeout_seconds": 60,
+    "shutdown_timeout_seconds": 15
+  },
+  "vtuber_callback_url": "http://localhost:12393/api/minecraft-event",
+  "callback_cooldown_seconds": 5,
+  "mindserver_process": {
+    "enabled": true,
+    "name": "mindserver",
+    "node_binary": "/home/leisuredays/.nvm/versions/node/v20.20.0/bin/node",
+    "working_dir": "/home/leisuredays/mindcraft",
+    "script": "main.js",
+    "host": "localhost",
+    "port": 8080,
+    "startup_timeout_seconds": 30,
+    "shutdown_timeout_seconds": 10,
+    "launch_on_activate": []
+  }
+}

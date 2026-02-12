@@ -52,6 +52,18 @@ class VADEngine(VADInterface):
 
     def detect_speech(self, audio_data: list[float]):
         audio_np = np.array(audio_data, dtype=np.float32)
+
+        # Log periodically (every ~1s ≈ 50 calls at 20ms)
+        if not hasattr(self, "_detect_call_count"):
+            self._detect_call_count = 0
+        self._detect_call_count += 1
+        if self._detect_call_count % 50 == 1:
+            max_amp = np.max(np.abs(audio_np)) if len(audio_np) > 0 else 0
+            logger.debug(
+                f"[VAD:Silero] detect_speech call #{self._detect_call_count}: "
+                f"{len(audio_np)} samples, max_amp={max_amp:.4f}, state={self.state.state.name}"
+            )
+
         for i in range(0, len(audio_np), self.window_size_samples):
             chunk_np = audio_np[i : i + self.window_size_samples]
             if len(chunk_np) < self.window_size_samples:
@@ -62,15 +74,29 @@ class VADEngine(VADInterface):
                 speech_prob = self.model(chunk, self.config.target_sr).item()
 
             if speech_prob:
-                # print(speech_prob)
+                prev_state = self.state.state
                 iter = self.state.get_result(speech_prob, chunk_np)
 
                 for probs, dbs, chunk in iter:  # detected a sequence of voice bytes
-                    # rounded_probs = [round(x, 2) for x in probs]
-                    # rounded_dbs = [round(y, 2) for y in dbs]
+                    if chunk == b"<|PAUSE|>":
+                        logger.info(f"[VAD:Silero] State → ACTIVE (speech start), prob={speech_prob:.3f}")
+                    elif chunk == b"<|RESUME|>":
+                        logger.info(f"[VAD:Silero] State → IDLE (speech end), prob={speech_prob:.3f}")
+                    else:
+                        logger.info(
+                            f"[VAD:Silero] Yielding voice audio: {len(chunk)} bytes, "
+                            f"prob_samples={len(probs)}"
+                        )
 
                     audio_chunk = bytes(chunk)
                     yield audio_chunk
+
+                # Log state transitions
+                if self.state.state != prev_state:
+                    logger.debug(
+                        f"[VAD:Silero] State transition: {prev_state.name} → {self.state.state.name}, "
+                        f"prob={speech_prob:.3f}"
+                    )
 
         del audio_np
 

@@ -8,6 +8,8 @@ dependencies = [
     "anthropic>=0.40.0",
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
+    "chromadb>=0.6.0",
+    "ollama>=0.4.0",
     "cartesia>=2.0.0", 
     "edge-tts>=7.0.0",
     "elevenlabs>=1.0.0",
@@ -48,6 +50,11 @@ bilibili = [
     "Brotli~=1.1.0",
     "yarl>=1.12.0,<2.0"
 ]
+discord = [
+    "discord.py[voice]>=2.3.0",
+    "PyNaCl>=1.5.0",
+    "discord-ext-voice-recv>=0.5.0a167",
+]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
@@ -64,5 +71,5 @@ cudatoolkit = ">=11.0,<12"
 target-version = "py310"
 
 [tool.ruff.lint]
-# Ignore E402 (module level import not at top of file) for the run_bilibili_live.py script
-per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"] }
+# Ignore E402 (module level import not at top of file) for live platform runner scripts
+per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"], "scripts/run_discord_live.py" = ["E402"] }

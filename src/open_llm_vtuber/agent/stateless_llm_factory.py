@@ -9,6 +9,7 @@ from .stateless_llm.stateless_llm_with_template import (
 from .stateless_llm.openai_compatible_llm import AsyncLLM as OpenAICompatibleLLM
 from .stateless_llm.ollama_llm import OllamaLLM
 from .stateless_llm.claude_llm import AsyncLLM as ClaudeLLM
+from .stateless_llm.dify_llm import DifyLLM
 
 
 class LLMFactory:
@@ -39,6 +40,7 @@ class LLMFactory:
                 organization_id=kwargs.get("organization_id"),
                 project_id=kwargs.get("project_id"),
                 temperature=kwargs.get("temperature"),
+                max_tokens=kwargs.get("max_tokens"),
             )
         if llm_provider == "stateless_llm_with_template":
             return StatelessLLMWithTemplate(
@@ -57,8 +59,10 @@ class LLMFactory:
                 organization_id=kwargs.get("organization_id"),
                 project_id=kwargs.get("project_id"),
                 temperature=kwargs.get("temperature"),
+                max_tokens=kwargs.get("max_tokens"),
                 keep_alive=kwargs.get("keep_alive"),
                 unload_at_exit=kwargs.get("unload_at_exit"),
+                num_ctx=kwargs.get("num_ctx"),
             )
 
         elif llm_provider == "llama_cpp_llm":
@@ -73,6 +77,21 @@ class LLMFactory:
                 base_url=kwargs.get("base_url"),
                 model=kwargs.get("model"),
                 llm_api_key=kwargs.get("llm_api_key"),
+            )
+        elif llm_provider == "dify_llm":
+            return DifyLLM(
+                base_url=kwargs.get("base_url"),
+                llm_api_key=kwargs.get("llm_api_key"),
+                user=kwargs.get("user", "open-llm-vtuber"),
+                app_type=kwargs.get("app_type", "workflow"),
+                input_variable=kwargs.get("input_variable", "query"),
+                system_prompt_variable=kwargs.get("system_prompt_variable", ""),
+                router_mcp_url=kwargs.get("router_mcp_url", ""),
+                mode_prompt_variable=kwargs.get(
+                    "mode_prompt_variable", "activated_mode_prompt"
+                ),
+                image_variable=kwargs.get("image_variable", ""),
+                image_upload_method=kwargs.get("image_upload_method", "direct"),
             )
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}")

@@ -9,7 +9,7 @@ and utility functions for loading/saving configurations.
 from .main import Config
 from .system import SystemConfig
 from .character import CharacterConfig
-from .live import LiveConfig, BiliBiliLiveConfig
+from .live import LiveConfig, BiliBiliLiveConfig, DiscordLiveConfig
 from .stateless_llm import (
     OpenAICompatibleConfig,
     ClaudeConfig,
@@ -43,6 +43,7 @@ from .vad import (
     SileroVADConfig,
 )
 from .tts_preprocessor import TTSPreprocessorConfig, TranslatorConfig, DeepLXConfig
+from .rag import RagConfig
 from .i18n import I18nMixin, Description, MultiLingualString
 from .agent import (
     AgentConfig,
@@ -71,6 +72,7 @@ __all__ = [
     "CharacterConfig",
     "LiveConfig",
     "BiliBiliLiveConfig",
+    "DiscordLiveConfig",
     # LLM related classes
     "OpenAICompatibleConfig",
     "ClaudeConfig",
@@ -112,6 +114,8 @@ __all__ = [
     "TTSPreprocessorConfig",
     "TranslatorConfig",
     "DeepLXConfig",
+    # RAG related classes
+    "RagConfig",
     # i18n related classes
     "I18nMixin",
     "Description",

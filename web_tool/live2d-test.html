@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live2D Model Test Platform</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e94560;
+  }
+  .header select {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #0f3460;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+  }
+  .header select:hover { border-color: #e94560; }
+
+  /* Main layout */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Left info panel */
+  .info-panel {
+    width: 220px;
+    background: #16213e;
+    border-right: 1px solid #0f3460;
+    padding: 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .info-panel h2 {
+    font-size: 14px;
+    color: #e94560;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .info-item {
+    margin-bottom: 10px;
+  }
+  .info-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .info-value {
+    font-size: 13px;
+    color: #ccc;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+
+  /* Canvas area */
+  .canvas-container {
+    flex: 1;
+    position: relative;
+    background: #0f0f23;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .canvas-container canvas {
+    display: block;
+  }
+  .canvas-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #555;
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  /* Right control panel */
+  .control-panel {
+    width: 280px;
+    background: #16213e;
+    border-left: 1px solid #0f3460;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 16px;
+  }
+  .section {
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 13px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #0f3460;
+  }
+  .group-title {
+    font-size: 11px;
+    color: #888;
+    margin: 8px 0 6px 0;
+    text-transform: uppercase;
+  }
+  .btn-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .btn {
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #0f3460;
+    background: #1a1a2e;
+    color: #ccc;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    background: #e94560;
+    color: #fff;
+    border-color: #e94560;
+  }
+  .btn.active {
+    background: #e94560;
+    color: #fff;
+    border-color: #e94560;
+  }
+  .btn-reset {
+    padding: 6px 16px;
+    border-radius: 4px;
+    border: 1px solid #e94560;
+    background: transparent;
+    color: #e94560;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+  }
+  .btn-reset:hover {
+    background: #e94560;
+    color: #fff;
+  }
+  .no-items {
+    color: #555;
+    font-size: 12px;
+    font-style: italic;
+    padding: 4px 0;
+  }
+
+  /* Status bar */
+  .status-bar {
+    padding: 6px 20px;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    font-size: 12px;
+    color: #888;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  .status-bar .status-error { color: #e94560; }
+  .status-bar .status-ok { color: #4ecca3; }
+
+  /* Loading spinner */
+  .loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+  }
+  .loading.visible { display: block; }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #0f3460;
+    border-top-color: #e94560;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Live2D Model Test Platform</h1>
+  <select id="modelSelect">
+    <option value="" disabled selected>Select a model...</option>
+  </select>
+</div>
+
+<div class="main">
+  <div class="info-panel">
+    <h2>Model Info</h2>
+    <div id="modelInfo">
+      <p class="no-items">No model loaded</p>
+    </div>
+  </div>
+
+  <div class="canvas-container" id="canvasContainer">
+    <div class="canvas-overlay" id="canvasOverlay">Select a model to begin</div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div style="color: #888; font-size: 13px;">Loading model...</div>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <div class="section">
+      <div class="section-title">Expressions</div>
+      <div id="expressionControls">
+        <p class="no-items">No model loaded</p>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Motions</div>
+      <div id="motionControls">
+        <p class="no-items">No model loaded</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="statusText">Ready</span>
+  <span id="statusRight"></span>
+</div>
+
+<!-- Dependencies -->
+<script src="/libs/live2dcubismcore.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.3/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  // --- Model Registry ---
+  const MODEL_REGISTRY = [
+    {
+      name: 'mao_pro',
+      description: 'Mao Pro Live2D Model',
+      url: '/live2d-models/mao_pro/runtime/mao_pro.model3.json',
+      kScale: 0.5,
+      kXOffset: 1150,
+    },
+    {
+      name: 'mashiro',
+      description: 'Mashiro Live2D Model',
+      url: '/live2d-models/mashiro/mashiro.model3.json',
+      kScale: 0.5,
+      kXOffset: 1150,
+    },
+    {
+      name: 'shizuku',
+      description: 'Shizuku Live2D Model',
+      url: '/live2d-models/shizuku/runtime/shizuku.model3.json',
+      kScale: 0.5,
+      kXOffset: 1150,
+    },
+  ];
+
+  // --- DOM refs ---
+  const modelSelect = document.getElementById('modelSelect');
+  const canvasContainer = document.getElementById('canvasContainer');
+  const canvasOverlay = document.getElementById('canvasOverlay');
+  const loadingEl = document.getElementById('loading');
+  const modelInfoEl = document.getElementById('modelInfo');
+  const expressionControlsEl = document.getElementById('expressionControls');
+  const motionControlsEl = document.getElementById('motionControls');
+  const statusText = document.getElementById('statusText');
+  const statusRight = document.getElementById('statusRight');
+
+  // --- State ---
+  let app = null;
+  let currentModel = null;
+  let currentModelMeta = null;
+  let activeExpressionIdx = -1;
+
+  // --- Init ---
+  function init() {
+    // Populate model selector
+    MODEL_REGISTRY.forEach((m, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = m.name;
+      modelSelect.appendChild(opt);
+    });
+
+    modelSelect.addEventListener('change', () => {
+      const idx = parseInt(modelSelect.value, 10);
+      if (!isNaN(idx)) loadModel(MODEL_REGISTRY[idx]);
+    });
+
+    // Create PIXI app
+    createPixiApp();
+
+    // Handle resize
+    window.addEventListener('resize', onResize);
+
+    setStatus('Ready. Select a model to begin.', 'ok');
+  }
+
+  function createPixiApp() {
+    if (app) {
+      app.destroy(true, { children: true, texture: true, baseTexture: true });
+    }
+
+    const rect = canvasContainer.getBoundingClientRect();
+    app = new PIXI.Application({
+      width: rect.width,
+      height: rect.height,
+      backgroundAlpha: 0,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+      autoStart: true,
+    });
+    canvasContainer.appendChild(app.view);
+    app.view.style.position = 'absolute';
+    app.view.style.top = '0';
+    app.view.style.left = '0';
+  }
+
+  function onResize() {
+    if (!app) return;
+    const rect = canvasContainer.getBoundingClientRect();
+    app.renderer.resize(rect.width, rect.height);
+    if (currentModel) {
+      fitModel(currentModel, currentModelMeta);
+    }
+  }
+
+  // --- Model Loading ---
+  async function loadModel(meta) {
+    setStatus('Loading ' + meta.name + '...', '');
+    canvasOverlay.style.display = 'none';
+    loadingEl.classList.add('visible');
+
+    // Clear existing model
+    if (currentModel) {
+      app.stage.removeChild(currentModel);
+      currentModel.destroy();
+      currentModel = null;
+    }
+    activeExpressionIdx = -1;
+
+    try {
+      const model = await PIXI.live2d.Live2DModel.from(meta.url, {
+        autoInteract: false,
+      });
+
+      currentModel = model;
+      currentModelMeta = meta;
+      app.stage.addChild(model);
+
+      fitModel(model, meta);
+
+      // Fetch model3.json for metadata
+      const resp = await fetch(meta.url);
+      const modelJson = await resp.json();
+
+      updateInfoPanel(meta, modelJson);
+      updateExpressionControls(modelJson);
+      updateMotionControls(modelJson);
+
+      loadingEl.classList.remove('visible');
+      setStatus('Loaded: ' + meta.name, 'ok');
+      statusRight.textContent = 'Expressions: ' +
+        (modelJson.FileReferences.Expressions ? modelJson.FileReferences.Expressions.length : 0) +
+        ' | Motion groups: ' +
+        Object.keys(modelJson.FileReferences.Motions || {}).length;
+
+    } catch (err) {
+      loadingEl.classList.remove('visible');
+      canvasOverlay.style.display = 'block';
+      canvasOverlay.textContent = 'Failed to load model: ' + err.message;
+      setStatus('Error: ' + err.message, 'error');
+      console.error('Model load error:', err);
+    }
+  }
+
+  function fitModel(model, meta) {
+    const rect = canvasContainer.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+
+    // Calculate scale to fit
+    const scaleX = w / model.width;
+    const scaleY = h / model.height;
+    const scale = Math.min(scaleX, scaleY) * 0.85;
+
+    model.scale.set(scale);
+    model.x = (w - model.width * scale) / 2;
+    model.y = (h - model.height * scale) / 2;
+  }
+
+  // --- Info Panel ---
+  function updateInfoPanel(meta, modelJson) {
+    const refs = modelJson.FileReferences;
+    const expCount = refs.Expressions ? refs.Expressions.length : 0;
+    const motionGroups = refs.Motions ? Object.keys(refs.Motions) : [];
+    const totalMotions = motionGroups.reduce((sum, g) => sum + (refs.Motions[g] || []).length, 0);
+    const hitAreas = modelJson.HitAreas ? modelJson.HitAreas.length : 0;
+
+    modelInfoEl.innerHTML = `
+      <div class="info-item">
+        <div class="info-label">Name</div>
+        <div class="info-value">${meta.name}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Description</div>
+        <div class="info-value">${meta.description || '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">URL</div>
+        <div class="info-value" style="font-size:11px">${meta.url}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Moc File</div>
+        <div class="info-value">${refs.Moc}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Textures</div>
+        <div class="info-value">${refs.Textures ? refs.Textures.length : 0}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Expressions</div>
+        <div class="info-value">${expCount}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Motion Groups</div>
+        <div class="info-value">${motionGroups.length} (${totalMotions} total)</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Hit Areas</div>
+        <div class="info-value">${hitAreas}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Physics</div>
+        <div class="info-value">${refs.Physics || '—'}</div>
+      </div>
+    `;
+  }
+
+  // --- Expression Controls ---
+  function updateExpressionControls(modelJson) {
+    expressionControlsEl.innerHTML = '';
+    const expressions = modelJson.FileReferences.Expressions;
+
+    if (!expressions || expressions.length === 0) {
+      expressionControlsEl.innerHTML = '<p class="no-items">No expressions available for this model</p>';
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'btn-grid';
+
+    expressions.forEach((exp, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = exp.Name;
+      btn.title = 'Expression #' + idx + ': ' + exp.File;
+      btn.addEventListener('click', () => {
+        triggerExpression(idx);
+        // Update active state
+        grid.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        if (activeExpressionIdx === idx) {
+          activeExpressionIdx = -1;
+        } else {
+          btn.classList.add('active');
+          activeExpressionIdx = idx;
+        }
+      });
+      grid.appendChild(btn);
+    });
+
+    expressionControlsEl.appendChild(grid);
+
+    // Reset button
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn-reset';
+    resetBtn.textContent = 'Reset Expression';
+    resetBtn.addEventListener('click', () => {
+      resetExpression();
+      grid.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+      activeExpressionIdx = -1;
+    });
+    expressionControlsEl.appendChild(resetBtn);
+  }
+
+  // --- Motion Controls ---
+  function updateMotionControls(modelJson) {
+    motionControlsEl.innerHTML = '';
+    const motions = modelJson.FileReferences.Motions;
+
+    if (!motions || Object.keys(motions).length === 0) {
+      motionControlsEl.innerHTML = '<p class="no-items">No motions available for this model</p>';
+      return;
+    }
+
+    Object.keys(motions).forEach(group => {
+      const groupItems = motions[group];
+      if (!groupItems || groupItems.length === 0) return;
+
+      const displayGroup = group === '' ? 'Default' : group;
+
+      const title = document.createElement('div');
+      title.className = 'group-title';
+      title.textContent = displayGroup + ' (' + groupItems.length + ')';
+      motionControlsEl.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'btn-grid';
+
+      groupItems.forEach((motion, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        // Extract a short name from the file path
+        const fileName = motion.File.split('/').pop().replace('.motion3.json', '');
+        btn.textContent = fileName;
+        btn.title = displayGroup + ' #' + idx + ': ' + motion.File;
+        btn.addEventListener('click', () => {
+          triggerMotion(group, idx);
+          setStatus('Playing motion: ' + displayGroup + '/' + fileName, 'ok');
+        });
+        grid.appendChild(btn);
+      });
+
+      motionControlsEl.appendChild(grid);
+    });
+  }
+
+  // --- Live2D Control ---
+  function triggerExpression(index) {
+    if (!currentModel) return;
+    try {
+      currentModel.expression(index);
+      setStatus('Expression set: #' + index, 'ok');
+    } catch (err) {
+      setStatus('Expression error: ' + err.message, 'error');
+    }
+  }
+
+  function triggerMotion(group, index) {
+    if (!currentModel) return;
+    try {
+      // Priority 3 = FORCE
+      currentModel.motion(group, index, 3);
+    } catch (err) {
+      setStatus('Motion error: ' + err.message, 'error');
+    }
+  }
+
+  function resetExpression() {
+    if (!currentModel) return;
+    try {
+      if (currentModel.internalModel &&
+          currentModel.internalModel.motionManager &&
+          currentModel.internalModel.motionManager.expressionManager) {
+        currentModel.internalModel.motionManager.expressionManager.resetExpression();
+        setStatus('Expression reset', 'ok');
+      }
+    } catch (err) {
+      setStatus('Reset error: ' + err.message, 'error');
+    }
+  }
+
+  // --- Status ---
+  function setStatus(msg, type) {
+    statusText.textContent = msg;
+    statusText.className = type === 'error' ? 'status-error' :
+                           type === 'ok' ? 'status-ok' : '';
+  }
+
+  // --- Check dependencies and start ---
+  function checkDependencies() {
+    if (typeof PIXI === 'undefined') {
+      canvasOverlay.textContent = 'Error: PixiJS failed to load. Check your internet connection.';
+      setStatus('PixiJS not loaded', 'error');
+      return false;
+    }
+    if (!PIXI.live2d || !PIXI.live2d.Live2DModel) {
+      canvasOverlay.textContent = 'Error: pixi-live2d-display failed to load.';
+      setStatus('pixi-live2d-display not loaded', 'error');
+      return false;
+    }
+    return true;
+  }
+
+  // Start when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (checkDependencies()) init();
+    });
+  } else {
+    if (checkDependencies()) init();
+  }
+})();
+</script>
+
+</body>
+</html>

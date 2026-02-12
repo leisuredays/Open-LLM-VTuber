@@ -13,8 +13,10 @@ class OllamaLLM(AsyncLLM):
         organization_id: str = "z",
         project_id: str = "z",
         temperature: float = 1.0,
+        max_tokens: int = None,
         keep_alive: float = -1,
         unload_at_exit: bool = True,
+        num_ctx: int = None,
     ):
         self.keep_alive = keep_alive
         self.unload_at_exit = unload_at_exit
@@ -26,7 +28,12 @@ class OllamaLLM(AsyncLLM):
             organization_id=organization_id,
             project_id=project_id,
             temperature=temperature,
+            max_tokens=max_tokens,
         )
+        # Set extra_body for Ollama-specific options like num_ctx
+        if num_ctx is not None:
+            self.extra_body = {"options": {"num_ctx": num_ctx}}
+            logger.info(f"Ollama: Setting num_ctx to {num_ctx}")
         try:
             # preload model
             logger.info("Preloading model for Ollama")

@@ -24,8 +24,11 @@ system_config:
     proactive_speak_prompt: 'proactive_speak_prompt'
     # 用来增强LLM输出可发音文本的提示词
     speakable_prompt: 'speakable_prompt'
+    # 启用 silence_prompt 允许 LLM 在没有有意义的内容要说时选择沉默。
+    # 启用后，LLM 可以仅用 <think> 标签回复来保持沉默，跳过 TTS 和历史存储。
+    # silence_prompt: 'silence_prompt'
     # 额外指导 LLM 如何使用工具的提示词
-    # tool_guidance_prompt: 'tool_guidance_prompt' 
+    # tool_guidance_prompt: 'tool_guidance_prompt'
 
 # 默认角色的配置
 character_config:
@@ -489,6 +492,23 @@ character_config:
         source_lang: 'zh'
         target_lang: 'ja'
 
+  # RAG（检索增强生成）配置
+  # 需要运行 Ollama 进行嵌入和 ChromaDB 进行向量存储
+  rag_config:
+    enabled: False
+    ollama_base_url: 'http://localhost:11434'
+    embedding_model: 'bge-m3'
+    summarization_model: ''
+    summarization_base_url: 'http://localhost:11434/v1'
+    summarization_api_key: ''
+    knowledge_dir: 'data/knowledge'
+    n_results: 3
+    min_messages_for_summary: 6
+    chunk_size: 500
+    chunk_overlap: 100
+    semantic_weight: 0.7       # 语义 0.7 + 关键词 0.3
+    score_threshold: 0.0       # 设为0.0禁用过滤
+
 # 直播平台集成
 live_config:
   bilibili_live:
@@ -496,3 +516,14 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie值（可选，用于认证请求，可以查看发送弹幕用户名）
     sessdata: ""
+
+  discord_live:
+    # Discord 机器人令牌，从 https://discord.com/developers/applications 获取
+    bot_token: ""
+    # 要监听的 Discord 频道 ID 列表（空列表 = 监听所有频道）
+    channel_ids: []
+    # 触发机器人的命令前缀（空字符串 = 响应所有消息）
+    prefix: ""
+    # 启用语音频道支持（加入/离开命令，TTS 音频播放）
+    # 需要: uv sync --extra discord，以及系统安装 ffmpeg 和 libopus
+    voice_enabled: false

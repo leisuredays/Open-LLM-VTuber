@@ -1,3 +1,5 @@
+import asyncio
+import json
 from typing import (
     AsyncIterator,
     List,
@@ -28,6 +30,7 @@ from ...mcpp.tool_manager import ToolManager
 from ...mcpp.json_detector import StreamJSONDetector
 from ...mcpp.types import ToolCallObject
 from ...mcpp.tool_executor import ToolExecutor
+from ...debug_monitor import debug_monitor
 
 
 class BasicMemoryAgent(AgentInterface):
@@ -49,10 +52,13 @@ class BasicMemoryAgent(AgentInterface):
         tool_manager: Optional[ToolManager] = None,
         tool_executor: Optional[ToolExecutor] = None,
         mcp_prompt_string: str = "",
+        rag_engine=None,
     ):
         """Initialize agent with LLM and configuration."""
         super().__init__()
         self._memory = []
+        self._rag_engine = rag_engine
+        self._current_rag_context: Optional[str] = None
         self._live2d_model = live2d_model
         self._tts_preprocessor_config = tts_preprocessor_config
         self._faster_first_response = faster_first_response
@@ -67,6 +73,18 @@ class BasicMemoryAgent(AgentInterface):
         self._tool_executor = tool_executor
         self._mcp_prompt_string = mcp_prompt_string
         self._json_detector = StreamJSONDetector()
+
+        # 모드 기반 도구 필터링을 위한 상태 추적
+        self._active_mode: str | None = None
+        self._base_system: str | None = None  # 모드 활성화 전 원래 시스템 프롬프트
+        self._mode_context_prompt: str = ""  # 모드 컨텍스트 프롬프트 캐시 (매 턴 갱신)
+        self._context_refresh_task: asyncio.Task | None = (
+            None  # 독립 컨텍스트 갱신 태스크
+        )
+        # 모드별 도구 접두사 매핑 (해당 모드가 활성화되어야만 사용 가능)
+        self._mode_tool_prefixes = {
+            "minecraft": ["minecraft_"],
+        }
 
         self._formatted_tools_openai = []
         self._formatted_tools_claude = []
@@ -109,6 +127,8 @@ class BasicMemoryAgent(AgentInterface):
                 "use_mcpp is False, but some MCP components were passed to the agent."
             )
 
+        self._current_trigger_reason: str | None = None
+
         logger.info("BasicMemoryAgent initialized.")
 
     def _set_llm(self, llm: StatelessLLMInterface):
@@ -124,6 +144,173 @@ class BasicMemoryAgent(AgentInterface):
             system = f"{system}\n\nIf you received `[interrupted by user]` signal, you were interrupted."
 
         self._system = system
+
+    def _filter_tools_by_mode(
+        self, tools: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """활성화된 모드에 따라 도구 목록을 필터링합니다."""
+        if not tools:
+            return tools
+
+        filtered = []
+        for tool in tools:
+            tool_name = tool.get("function", {}).get("name") or tool.get("name", "")
+
+            # activate_mode는 모드가 비활성화 상태일 때만 표시
+            if tool_name == "activate_mode":
+                if self._active_mode is None:
+                    filtered.append(tool)
+                else:
+                    logger.debug(
+                        f"Filtering out 'activate_mode' (mode already active: {self._active_mode})"
+                    )
+                continue
+
+            # deactivate_mode는 모드가 활성화 상태일 때만 표시
+            if tool_name == "deactivate_mode":
+                if self._active_mode is not None:
+                    filtered.append(tool)
+                else:
+                    logger.debug("Filtering out 'deactivate_mode' (no active mode)")
+                continue
+
+            # 모드별 도구 접두사 확인
+            is_mode_specific = False
+            required_mode = None
+            for mode, prefixes in self._mode_tool_prefixes.items():
+                for prefix in prefixes:
+                    if tool_name.startswith(prefix):
+                        is_mode_specific = True
+                        required_mode = mode
+                        break
+                if is_mode_specific:
+                    break
+
+            # 모드별 도구는 해당 모드가 활성화된 경우에만 포함
+            if is_mode_specific:
+                if self._active_mode == required_mode:
+                    filtered.append(tool)
+                    logger.debug(f"Including mode-specific tool: {tool_name}")
+                else:
+                    logger.debug(
+                        f"Filtering out tool '{tool_name}' (requires mode: {required_mode}, active: {self._active_mode})"
+                    )
+            else:
+                filtered.append(tool)
+
+        return filtered
+
+    def _update_mode_from_tool_result(self, tool_name: str, result: str):
+        """도구 실행 결과에서 모드 상태를 업데이트하고, 모드 시스템 프롬프트를 주입/복원합니다."""
+        try:
+            if tool_name == "activate_mode" and '"success": true' in result.lower():
+                data = json.loads(result)
+                if data.get("success") and data.get("activated_mode"):
+                    self._active_mode = data["activated_mode"].get("id")
+                    logger.info(f"Mode activated: {self._active_mode}")
+
+                    # 모드 시스템 프롬프트를 LLM 시스템 프롬프트에 주입
+                    mode_system_prompt = data.get("system_prompt", "")
+                    if mode_system_prompt:
+                        if self._base_system is None:
+                            self._base_system = self._system
+                        self._system = f"{self._base_system}\n\n{mode_system_prompt}"
+                        logger.info(
+                            f"Mode system prompt injected for: {self._active_mode}"
+                        )
+
+            elif tool_name == "deactivate_mode" and '"success": true' in result.lower():
+                logger.info(f"Mode deactivated (was: {self._active_mode})")
+                self._active_mode = None
+                self._mode_context_prompt = ""
+
+                # 원래 시스템 프롬프트 복원
+                if self._base_system is not None:
+                    self._system = self._base_system
+                    self._base_system = None
+                    logger.info("Restored base system prompt")
+
+        except Exception as e:
+            logger.debug(f"Could not parse mode from tool result: {e}")
+
+    async def _refresh_mode_context(self) -> None:
+        """모드가 활성화된 경우, 독립 태스크로 컨텍스트를 갱신합니다.
+        대화 인터럽트에 의한 CancelledError가 MCP 세션을 오염시키지 않도록
+        별도 태스크에서 실행합니다.
+        """
+        if not self._active_mode or not self._tool_executor:
+            self._mode_context_prompt = ""
+            return
+
+        # 이전 갱신 태스크가 아직 실행 중이면 완료를 기다림
+        if self._context_refresh_task and not self._context_refresh_task.done():
+            try:
+                await asyncio.wait_for(self._context_refresh_task, timeout=3.0)
+            except asyncio.TimeoutError:
+                pass
+            except asyncio.CancelledError:
+                raise  # 대화 인터럽트 전파
+
+        # 독립 태스크로 실행 — 대화 취소에 영향 안 받음
+        self._context_refresh_task = asyncio.create_task(
+            self._do_refresh_mode_context()
+        )
+
+        # 짧은 시간 내 완료되면 결과 사용, 아니면 캐시 유지하고 진행
+        try:
+            await asyncio.wait_for(
+                asyncio.shield(self._context_refresh_task), timeout=3.0
+            )
+        except asyncio.TimeoutError:
+            logger.debug(
+                f"Mode context refresh timed out for {self._active_mode}. "
+                "Using cached context."
+            )
+        except asyncio.CancelledError:
+            logger.debug(
+                f"Mode context refresh cancelled for {self._active_mode}. "
+                "Using cached context. Independent task continues."
+            )
+            raise  # 대화 인터럽트 전파 — 독립 태스크는 계속 실행됨
+
+    async def _do_refresh_mode_context(self) -> None:
+        """실제 MCP 호출로 모드 컨텍스트를 갱신합니다. (독립 태스크에서 실행)"""
+        try:
+            is_error, text_content, _, _ = await self._tool_executor.run_single_tool(
+                "get_mode_context_prompt", "auto-context", {}
+            )
+            if not is_error and text_content:
+                data = json.loads(text_content)
+                if data.get("success") and data.get("has_mode"):
+                    self._mode_context_prompt = data.get("prompt", "")
+                    logger.debug(
+                        f"Mode context refreshed for {self._active_mode} "
+                        f"(len={len(self._mode_context_prompt)})"
+                    )
+                    return
+        except Exception as e:
+            logger.debug(f"Failed to fetch mode context: {e}")
+        self._mode_context_prompt = ""
+
+    def _get_effective_system(self) -> str:
+        """캐시된 모드 컨텍스트와 RAG 컨텍스트를 포함한 시스템 프롬프트를 반환합니다."""
+        system = self._system
+        if self._mode_context_prompt:
+            system += f"\n\n--- 현재 모드 상태 ---\n{self._mode_context_prompt}"
+        if self._current_rag_context:
+            system += (
+                "\n\n# 배경 지식\n"
+                "아래는 대화에 참고할 수 있는 정보입니다. "
+                "관련될 때만 자연스럽게 활용하고, 관련 없으면 무시하세요.\n\n"
+                f"{self._current_rag_context}"
+            )
+        # 핵심 규칙 리마인더 (recency effect 활용)
+        system += (
+            "\n\n# 리마인더\n"
+            "위 배경 지식보다 캐릭터 성격과 말투 규칙이 항상 우선합니다. "
+            "캐릭터를 벗어나는 응답은 절대 하지 마세요."
+        )
+        return system
 
     def _add_message(
         self,
@@ -239,6 +426,10 @@ class BasicMemoryAgent(AgentInterface):
 
         return "\n".join(message_parts).strip()
 
+    def _extract_latest_user_text(self, input_data: BatchInput) -> str:
+        """Extract the latest user text from input data for RAG search."""
+        return self._to_text_prompt(input_data) or ""
+
     def _to_messages(self, input_data: BatchInput) -> List[Dict[str, Any]]:
         """Prepare messages for LLM API call."""
         messages = self._memory.copy()
@@ -299,7 +490,22 @@ class BasicMemoryAgent(AgentInterface):
         current_assistant_message_content = []
 
         while True:
-            stream = self._llm.chat_completion(messages, self._system, tools=tools)
+            # 모드에 따라 도구 필터링
+            filtered_tools = self._filter_tools_by_mode(tools)
+
+            # Debug: 프롬프트 모니터링
+            effective_system = self._get_effective_system()
+            await debug_monitor.log_prompt(
+                system_prompt=effective_system,
+                messages=messages,
+                tools=filtered_tools,
+                model=getattr(self._llm, "model", None),
+                trigger_reason=self._current_trigger_reason,
+            )
+
+            stream = self._llm.chat_completion(
+                messages, effective_system, tools=filtered_tools
+            )
             pending_tool_calls.clear()
             current_assistant_message_content.clear()
 
@@ -383,6 +589,12 @@ class BasicMemoryAgent(AgentInterface):
                         if update.get("type") == "final_tool_results":
                             tool_results_for_llm = update.get("results", [])
                             break
+                        elif update.get("type") == "tool_call_status":
+                            # 모드 상태 업데이트 확인
+                            tool_name = update.get("tool_name", "")
+                            content = update.get("content", "")
+                            self._update_mode_from_tool_result(tool_name, content)
+                            yield update
                         else:
                             yield update
                 except StopAsyncIteration:
@@ -409,21 +621,32 @@ class BasicMemoryAgent(AgentInterface):
         messages = initial_messages.copy()
         current_turn_text = ""
         pending_tool_calls: Union[List[ToolCallObject], List[Dict[str, Any]]] = []
-        current_system_prompt = self._system
+        effective_system = self._get_effective_system()
+        current_system_prompt = effective_system
 
         while True:
             if self.prompt_mode_flag:
                 if self._mcp_prompt_string:
                     current_system_prompt = (
-                        f"{self._system}\n\n{self._mcp_prompt_string}"
+                        f"{effective_system}\n\n{self._mcp_prompt_string}"
                     )
                 else:
                     logger.warning("Prompt mode active but mcp_prompt_string is empty!")
-                    current_system_prompt = self._system
+                    current_system_prompt = effective_system
                 tools_for_api = None
             else:
-                current_system_prompt = self._system
-                tools_for_api = tools
+                current_system_prompt = effective_system
+                # 모드에 따라 도구 필터링
+                tools_for_api = self._filter_tools_by_mode(tools)
+
+            # Debug: 프롬프트 모니터링
+            await debug_monitor.log_prompt(
+                system_prompt=current_system_prompt,
+                messages=messages,
+                tools=tools_for_api,
+                model=getattr(self._llm, "model", None),
+                trigger_reason=self._current_trigger_reason,
+            )
 
             stream = self._llm.chat_completion(
                 messages, current_system_prompt, tools=tools_for_api
@@ -521,6 +744,12 @@ class BasicMemoryAgent(AgentInterface):
                             if update.get("type") == "final_tool_results":
                                 tool_results_for_llm = update.get("results", [])
                                 break
+                            elif update.get("type") == "tool_call_status":
+                                # 모드 상태 업데이트 확인
+                                tool_name = update.get("tool_name", "")
+                                content = update.get("content", "")
+                                self._update_mode_from_tool_result(tool_name, content)
+                                yield update
                             else:
                                 yield update
                     except StopAsyncIteration:
@@ -562,6 +791,12 @@ class BasicMemoryAgent(AgentInterface):
                         if update.get("type") == "final_tool_results":
                             tool_results_for_llm = update.get("results", [])
                             break
+                        elif update.get("type") == "tool_call_status":
+                            # 모드 상태 업데이트 확인
+                            tool_name = update.get("tool_name", "")
+                            content = update.get("content", "")
+                            self._update_mode_from_tool_result(tool_name, content)
+                            yield update
                         else:
                             yield update
                 except StopAsyncIteration:
@@ -598,7 +833,35 @@ class BasicMemoryAgent(AgentInterface):
             self.reset_interrupt()
             self.prompt_mode_flag = False
 
+            # 트리거 이유 추출
+            self._current_trigger_reason = (
+                input_data.metadata.get("trigger_reason")
+                if input_data.metadata
+                else None
+            )
+
+            # 모드가 활성화된 경우 컨텍스트 프롬프트를 갱신
+            await self._refresh_mode_context()
+
             messages = self._to_messages(input_data)
+
+            # RAG search injection
+            if self._rag_engine:
+                user_query = self._extract_latest_user_text(input_data)
+                if user_query:
+                    self._current_rag_context = self._rag_engine.search(user_query)
+                    if self._current_rag_context:
+                        logger.info(
+                            f"RAG context injected ({len(self._current_rag_context)} chars): "
+                            f"{self._current_rag_context[:100]}..."
+                        )
+                    else:
+                        logger.debug("RAG search returned empty results.")
+                else:
+                    self._current_rag_context = None
+            else:
+                logger.debug("RAG engine not available.")
+
             tools = None
             tool_mode = None
             llm_supports_native_tools = False
@@ -643,7 +906,16 @@ class BasicMemoryAgent(AgentInterface):
                 return
             else:
                 logger.info("Starting simple chat completion.")
-                token_stream = self._llm.chat_completion(messages, self._system)
+                effective_system = self._get_effective_system()
+                # Debug: 프롬프트 모니터링
+                await debug_monitor.log_prompt(
+                    system_prompt=effective_system,
+                    messages=messages,
+                    tools=None,
+                    model=getattr(self._llm, "model", None),
+                    trigger_reason=self._current_trigger_reason,
+                )
+                token_stream = self._llm.chat_completion(messages, effective_system)
                 complete_response = ""
                 async for event in token_stream:
                     text_chunk = ""

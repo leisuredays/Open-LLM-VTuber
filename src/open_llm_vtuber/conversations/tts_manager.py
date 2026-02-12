@@ -89,6 +89,16 @@ class TTSTaskManager:
         )
         self.task_list.append(task)
 
+    async def drain(self) -> None:
+        """Wait for all queued payloads to be sent via the sender task.
+
+        Call this after asyncio.gather on task_list to ensure all TTS payloads
+        have been delivered through the WebSocket before sending any follow-up
+        messages (e.g. backend-synth-complete).
+        """
+        if self._sender_task and not self._sender_task.done():
+            await self._payload_queue.join()
+
     async def _process_payload_queue(self, websocket_send: WebSocketSend) -> None:
         """
         Process and send payloads in correct order.

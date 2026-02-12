@@ -1,0 +1,155 @@
+TypeError: Cannot read properties of null (reading 'release')
+    at LAppView.release (http://localhost:3000/WebSDK/src/lappview.ts?t=1770043862998:69:20)
+    at LAppDelegate.release (http://localhost:3000/WebSDK/src/lappdelegate.ts?t=1770043862998:151:20)
+    at LAppDelegate.releaseInstance (http://localhost:3000/WebSDK/src/lappdelegate.ts?t=1770043862998:57:24)
+    at window.addEventListener.passive (http://localhost:3000/WebSDK/src/main.ts?t=1770043862998:72:62)
+TypeError: Cannot read properties of null (reading 'getArray')
+    at LAppLive2DManager.setViewMatrix (http://localhost:3000/WebSDK/src/lapplive2dmanager.ts?t=1770043862998:172:48)
+    at LAppView.render (http://localhost:3000/WebSDK/src/lappview.ts?t=1770043862998:86:23)
+    at loop (http://localhost:3000/WebSDK/src/lappdelegate.ts?t=1770043862998:197:24)
+[INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/@fs/home/leisuredays/Open-LLM-VTuber/Open-LLM-VTuber-Web/node_modules/.vite/deps/chunk-3IHV7RO6.js?v=13aff825:21550
+[LOG] i18next: languageChanged en-US @ http://localhost:3000/@fs/home/leisuredays/Open-LLM-VTuber/Open-LLM-VTuber-Web/node_modules/.vite/deps/i18next.js?v=13aff825:208
+[LOG] i18next: initialized {debug: true, initAsync: true, ns: Array(1), defaultNS: translation, fallbackLng: Array(1)} @ http://localhost:3000/@fs/home/leisuredays/Open-LLM-VTuber/Open-LLM-VTuber-Web/node_modules/.vite/deps/i18next.js?v=13aff825:208
+[LOG] Live2D Cubism Core loaded successfully. @ http://localhost:3000/src/main.tsx:36
+[LOG] Live2D Debug functions exposed to window.Live2DDebug @ http://localhost:3000/src/hooks/canvas/use-live2d-model.ts?t=1770043862998:514
+[LOG] Type Live2DDebug.help() for usage information @ http://localhost:3000/src/hooks/canvas/use-live2d-model.ts?t=1770043862998:515
+[WARNING] Canvas is null, skipping resize @ http://localhost:3000/src/main.tsx:11
+[WARNING] Canvas is null, skipping resize @ http://localhost:3000/src/main.tsx:11
+[LOG] Received message from server: {type: group-update, members: Array(0), is_owner: false} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Received group-update: [] @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:253
+[LOG] Received message from server: {type: full-text, text: Connection established} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Received message from server: {type: set-model-and-conf, model_info: Object, conf_name: mashiro, conf_uid: mashiro_001, client_uid: 0043d884-93c6-450b-93bb-759546206b01} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] confUid mashiro_001 @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:130
+[LOG] Received message from server: {type: group-update, members: Array(0), is_owner: false} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Received group-update: [] @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:253
+[LOG] Received message from server: {type: control, text: start-mic} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Starting microphone... @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:78
+[LOG] Initializing VAD @ http://localhost:3000/src/context/vad-context.tsx?t=1770043862998:217
+[LOG] Received message from server: {type: background-files, files: Array(14)} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Received message from server: {type: config-files, configs: Array(5)} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Received message from server: {type: history-list, histories: Array(18)} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Received message from server: {type: new-history-created, history_uid: 2026-02-02_23-56-54_5f362cae32874322803dad6d7095a5ea} @ http://localhost:3000/src/services/websocket-handler.tsx?t=1770043862998:116
+[LOG] Model or model settings not loaded yet, skipping expression reset @ http://localhost:3000/src/hooks/canvas/use-live2d-expression.ts:38
+[LOG] Setting model info with default scale: 1 @ http://localhost:3000/src/context/live2d-config-context.tsx:57
+[LOG] Updating model config: {resourcePath: http://127.0.0.1:12393/live2d-models/, modelDirectory: mashiro, modelFileName: mashiro, kScale: 1} @ http://localhost:3000/WebSDK/src/lappdefine.ts:30
+[LOG] Model or model settings not loaded yet, skipping expression reset @ http://localhost:3000/src/hooks/canvas/use-live2d-expression.ts:38
+[WARNING] Canvas is null, skipping resize @ http://localhost:3000/src/main.tsx:11
+[ERROR] Failed to start VAD: NotAllowedError: Permission denied @ http://localhost:3000/src/main.tsx:26
+[LOG] Initializing Live2D with resourcePath: http://127.0.0.1:12393/live2d-models/ @ http://localhost:3000/WebSDK/src/main.ts?t=1770043862998:13
+[LOG] Model directories: [mashiro] @ http://localhost:3000/WebSDK/src/main.ts?t=1770043862998:14
+[LOG] [CSM][I]Live2D Cubism Core version: 05.00.0000 (83886080)
+ @ http://localhost:3000/WebSDK/src/lapppal.ts:59
+[LOG] [CSM][I]CubismFramework.startUp() is complete.
+ @ http://localhost:3000/WebSDK/src/lapppal.ts:59
+[LOG] [CSM][I]CubismFramework.initialize() is complete.
+ @ http://localhost:3000/WebSDK/src/lapppal.ts:59
+[LOG] Model has 0 hit areas @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:94
+[LOG] Live2D Cubism SDK Core Version 5.0.0 @ http://localhost:3000/libs/live2dcubismcore.js:683
+[WARNING] [Fallback] No LipSync IDs defined in model setting. Attempting fallback to "ParamMouthOpenY". @ http://localhost:3000/src/main.tsx:11
+[LOG] [Fallback] Successfully added "ParamMouthOpenY" as LipSync ID. @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:279
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 18, 1, 0.211, 18, 0.422, 0, 0.633, 0, 1, 0.889, 0, 1.144, 22, 1.4, 22, 1, 1.578, 22, 1.756] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=18, stored_value=18 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [PARSE-DEBUG] curve0 bezier: cp1_val=18, cp2_val=0, end_val=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:637
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.056, 0, 0.111, 0, 0.167, 0, 1, 0.389, 0, 0.611, 0, 0.833, 0, 1, 0.933, 0, 1.033] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 1, 1, 0.211, 1, 0.422, 0, 0.633, 0, 1, 0.911, 0, 1.189, 5, 1.467, 5, 1, 1.689, 5, 1.911] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=1, stored_value=1 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.111, 0, 0.222, 1, 0.333, 1, 1, 0.7, 1, 1.067, 0, 1.433, 0, 1, 1.711, 0, 1.989] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.189, 0, 0.378, 1, 0.567, 1, 1, 1.122, 1, 1.678, 1, 2.233, 1, 1, 2.533, 1, 2.833] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.067, 0, 0.133, 0, 0.2, 0, 1, 0.4, 0, 0.6, 0, 0.8, 0, 1, 1.067, 0, 1.333] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.111, 0, 0.222, 0, 0.333, 0, 1, 0.856, 0, 1.378, 0, 1.9, 0] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.067, 0, 0.133, 0, 0.2, 0, 1, 0.244, 0, 0.289, 0, 0.333, 0, 1, 0.378, 0, 0.422] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.067, 0, 0.133, 0, 0.2, 0, 1, 0.333, 0, 0.467, -4, 0.6, -4, 1, 0.933, -4, 1.267] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleY, first 20 segments: [0, 0, 1, 0.111, 0, 0.222, 7, 0.333, 7, 1, 0.433, 7, 0.533, -17, 0.633, -17, 1, 0.744, -17, 0.856] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.211, 0, 0.422, 7, 0.633, 7, 1, 0.878, 7, 1.122, 5.259, 1.367, 0, 1, 1.544, -3.825, 1.722] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] [RAW-JSON-DEBUG] curve0 id=ParamAngleX, first 20 segments: [0, 0, 1, 0.056, 0, 0.111, 5, 0.167, 5, 1, 0.222, 5, 0.278, -2, 0.333, -2, 1, 0.4, -2, 0.467] @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:506
+[LOG] [PARSE-DEBUG] curve0 first point: time=0, value=0, stored_value=0 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:594
+[LOG] Setting up textures for model: http://127.0.0.1:12393/live2d-models/mashiro/ @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:349
+[LOG] [DEBUG-LOAD] AngleX=0.00, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Motion finished (qSize=0), starting new idle @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:412
+[LOG] [DEBUG-MOTION] AngleX=0.00, BodyAngleX=0.00, updated=false @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=0.00, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=0.79, BodyAngleX=0.09 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=0.79, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [EVAL-CURVE-DUMP] curve0 seg target=0, basePt=0, type=1, points: P0(t=0.000,v=18.00), P1(t=0.211,v=18.00), P2(t=0.422,v=0.00), P3(t=0.633,v=0.00), P4(t=0.889,v=0.00), P5(t=1.144,v=22.00), P6(t=1.400,v=22.00), P7(t=1.578,v=22.00) @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:177
+[LOG] [MOTION-BLEND] ParamAngleX: src=0.00, curve=18.00, fadeW=0.0000, v=0.00, time=0.000, timeOff=0.000, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=0.14, user=0.14 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=22.00, curve=22.00, fadeW=1.0000, v=22.00, time=1.569, timeOff=1.569, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=0.14, user=1.71 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=-23.00, BodyAngleX=6.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=-23.00, BodyAngleX=6.00, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=-23.00, BodyAngleX=6.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=-23.30, BodyAngleX=7.95 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=-23.30, BodyAngleX=-6.59 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=-23.00, curve=-23.00, fadeW=1.0000, v=-23.00, time=3.085, timeOff=3.085, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=0.14, user=3.22 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=2.35, curve=2.81, fadeW=1.0000, v=2.81, time=4.638, timeOff=4.638, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=0.14, user=4.78 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=17.58, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=17.63, BodyAngleX=0.00, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=17.63, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=16.69, BodyAngleX=1.05 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=16.69, BodyAngleX=4.62 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=17.63, curve=17.69, fadeW=1.0000, v=17.69, time=6.179, timeOff=6.179, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=0.14, user=6.32 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=17.43, curve=18.29, fadeW=1.0000, v=18.29, time=1.200, timeOff=1.200, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=6.65, user=7.85 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=-17.53, BodyAngleX=6.47 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=-18.56, BodyAngleX=6.38, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=-18.56, BodyAngleX=6.38 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=-16.28, BodyAngleX=5.11 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=-16.28, BodyAngleX=-3.99 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=-18.56, curve=-19.55, fadeW=1.0000, v=-19.55, time=2.742, timeOff=2.742, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=6.65, user=9.40 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=-9.10, curve=-7.83, fadeW=1.0000, v=-7.83, time=4.292, timeOff=4.292, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=6.65, user=10.95 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=16.17, BodyAngleX=0.01 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=16.30, BodyAngleX=0.01, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=16.30, BodyAngleX=0.01 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=12.74, BodyAngleX=-1.86 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=12.74, BodyAngleX=3.46 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=16.30, curve=16.43, fadeW=1.0000, v=16.43, time=5.815, timeOff=5.815, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=6.65, user=12.47 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=3.06, curve=3.98, fadeW=0.9389, v=3.92, time=0.841, timeOff=0.841, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=13.16, user=14.01 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=-23.00, BodyAngleX=6.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=-23.00, BodyAngleX=6.00, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=-23.00, BodyAngleX=6.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=-22.75, BodyAngleX=6.61 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=-22.75, BodyAngleX=-6.46 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=-23.00, curve=-23.00, fadeW=1.0000, v=-23.00, time=3.052, timeOff=3.052, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=13.16, user=16.22 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=1.73, curve=2.25, fadeW=1.0000, v=2.25, time=4.609, timeOff=4.609, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=13.16, user=17.77 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=17.52, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=17.59, BodyAngleX=0.00, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=17.59, BodyAngleX=0.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=16.18, BodyAngleX=2.00 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=16.18, BodyAngleX=4.47 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=17.59, curve=17.64, fadeW=1.0000, v=17.64, time=6.159, timeOff=6.159, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=13.16, user=19.32 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [MOTION-BLEND] ParamAngleX: src=16.92, curve=17.85, fadeW=1.0000, v=17.85, time=1.187, timeOff=1.187, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=19.69, user=20.87 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328
+[LOG] [DEBUG-LOAD] AngleX=-16.06, BodyAngleX=6.58 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:406
+[LOG] [DEBUG] Updating motion (qSize=1) @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:415
+[LOG] [DEBUG-MOTION] AngleX=-17.35, BodyAngleX=6.48, updated=true @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:422
+[LOG] [DEBUG-DRAG] dragX=0.0000, dragY=0.0000 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:446
+[LOG] [DEBUG-AFTER-DRAG] AngleX=-17.35, BodyAngleX=6.48 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:449
+[LOG] [DEBUG-AFTER-BREATH] AngleX=-14.63, BodyAngleX=7.13 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:458
+[LOG] [DEBUG-FINAL] AngleX=-14.63, BodyAngleX=-3.45 @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:482
+[LOG] --- @ http://localhost:3000/WebSDK/src/lappmodel.ts?t=1770043862998:483
+[LOG] [MOTION-BLEND] ParamAngleX: src=-17.35, curve=-18.60, fadeW=1.0000, v=-18.60, time=2.717, timeOff=2.717, isLoop=true, dur=6.5, fadeIn=1, fadeOut=1, endT=-1.00, startT=19.69, user=22.40 @ http://localhost:3000/WebSDK/Framework/src/motion/cubismmotion.ts?t=1770043862998:328

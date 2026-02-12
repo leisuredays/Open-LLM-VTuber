@@ -9,10 +9,10 @@ Open-LLM-VTuber is a voice-interactive AI companion with Live2D avatar support t
 ## Essential Commands
 
 ### Development Setup
-- **Install dependencies**: `uv sync` (uses uv package manager)
-- **Run server**: `uv run run_server.py`
-- **Run with verbose logging**: `uv run run_server.py --verbose`
-- **Update project**: `uv run upgrade.py`
+- **Install dependencies**: `conda install --file requirements.txt` or `pip install -r requirements.txt` (uses conda environment)
+- **Run server**: `python run_server.py`
+- **Run with verbose logging**: `python run_server.py --verbose`
+- **Update project**: `python upgrade.py`
 
 ### Code Quality
 - **Lint code**: `ruff check .`

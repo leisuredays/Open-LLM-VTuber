@@ -16,11 +16,12 @@ class ToolAdapter:
         self.server_registery = server_registery or ServerRegistry()
 
     async def get_server_and_tool_info(
-        self, enabled_servers: List[str]
+        self, enabled_servers: List[str], excluded_tools: Optional[List[str]] = None
     ) -> Tuple[Dict[str, Dict[str, str]], Dict[str, FormattedTool]]:
         """Fetch tool information from specified enabled MCP servers."""
         servers_info: Dict[str, Dict[str, str]] = {}
         formatted_tools: Dict[str, FormattedTool] = {}
+        excluded_tools = excluded_tools or []
 
         if not enabled_servers:
             logger.warning(
@@ -29,6 +30,8 @@ class ToolAdapter:
             return servers_info, formatted_tools
 
         logger.debug(f"MC: Fetching tool info for enabled servers: {enabled_servers}")
+        if excluded_tools:
+            logger.debug(f"MC: Excluding tools: {excluded_tools}")
 
         # Use a single client instance for efficiency
         async with MCPClient(self.server_registery) as client:
@@ -46,6 +49,12 @@ class ToolAdapter:
                         f"MC: Found {len(tools)} tools on server '{server_name}'"
                     )
                     for tool in tools:
+                        if tool.name in excluded_tools:
+                            logger.debug(
+                                f"MC: Skipping excluded tool: {tool.name}"
+                            )
+                            continue
+
                         servers_info[server_name][tool.name] = {}
                         tool_info = servers_info[server_name][tool.name]
                         tool_info["description"] = tool.description
@@ -217,16 +226,53 @@ class ToolAdapter:
         return openai_tools, claude_tools
 
     async def get_tools(
-        self, enabled_servers: List[str]
-    ) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Run the dynamic fetching and formatting process."""
+        self,
+        enabled_servers: List[str],
+        excluded_tools: Optional[List[str]] = None,
+        llm_hidden_tools: Optional[List[str]] = None,
+    ) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, FormattedTool]]:
+        """Run the dynamic fetching and formatting process.
+
+        Args:
+            enabled_servers: List of MCP server names to fetch tools from.
+            excluded_tools: Tools to exclude entirely (not fetched at all).
+            llm_hidden_tools: Tools to hide from LLM (excluded from API lists
+                and prompt string, but kept in raw_tools_dict for internal use).
+
+        Returns:
+            Tuple of (mcp_prompt_string, openai_tools, claude_tools, raw_tools_dict)
+        """
         logger.info(
             f"MC: Running dynamic tool construction for servers: {enabled_servers}"
         )
+        llm_hidden_tools = llm_hidden_tools or []
+
         servers_info, formatted_tools_dict = await self.get_server_and_tool_info(
-            enabled_servers
+            enabled_servers, excluded_tools
         )
-        mcp_prompt_string = self.construct_mcp_prompt_string(servers_info)
-        openai_tools, claude_tools = self.format_tools_for_api(formatted_tools_dict)
+
+        # Filter out LLM-hidden tools from prompt and API lists,
+        # but keep them in formatted_tools_dict for internal use (e.g. run_single_tool)
+        if llm_hidden_tools:
+            logger.debug(f"MC: Hiding tools from LLM: {llm_hidden_tools}")
+            llm_servers_info = {
+                server: {
+                    name: info
+                    for name, info in tools.items()
+                    if name not in llm_hidden_tools
+                }
+                for server, tools in servers_info.items()
+            }
+            llm_tools_dict = {
+                name: tool
+                for name, tool in formatted_tools_dict.items()
+                if name not in llm_hidden_tools
+            }
+        else:
+            llm_servers_info = servers_info
+            llm_tools_dict = formatted_tools_dict
+
+        mcp_prompt_string = self.construct_mcp_prompt_string(llm_servers_info)
+        openai_tools, claude_tools = self.format_tools_for_api(llm_tools_dict)
         logger.info("MC: Dynamic tool construction complete.")
-        return mcp_prompt_string, openai_tools, claude_tools
+        return mcp_prompt_string, openai_tools, claude_tools, formatted_tools_dict

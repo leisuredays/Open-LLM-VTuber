@@ -52,6 +52,7 @@ async def handle_conversation_trigger(
             "proactive_speak": True,
             "skip_memory": True,  # Skip storing in AI's internal memory
             "skip_history": True,  # Skip storing in local conversation history
+            "trigger_reason": "자발적 발화",
         }
 
         await websocket.send_text(
@@ -62,11 +63,30 @@ async def handle_conversation_trigger(
                 }
             )
         )
+    elif msg_type == "minecraft-event":
+        user_input = data.get("text", "마인크래프트에서 무언가 일어났습니다.")
+        metadata = {
+            "proactive_speak": True,
+            "skip_memory": True,
+            "skip_history": True,
+            "trigger_reason": "마인크래프트 이벤트",
+        }
+
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "full-text",
+                    "text": "Reacting to Minecraft event...",
+                }
+            )
+        )
     elif msg_type == "text-input":
         user_input = data.get("text", "")
+        metadata = {"trigger_reason": "텍스트 입력"}
     else:  # mic-audio-end
         user_input = received_data_buffers[client_uid]
         received_data_buffers[client_uid] = np.array([])
+        metadata = {"trigger_reason": "음성 입력"}
 
     images = data.get("images")
     session_emoji = np.random.choice(EMOJI_LIST)
