@@ -1,6 +1,7 @@
 from typing import Union, List, Dict, Any, Optional
 import asyncio
 import json
+import time
 from loguru import logger
 import numpy as np
 
@@ -17,6 +18,21 @@ from .types import WebSocketSend
 from .tts_manager import TTSTaskManager
 from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
+import urllib.request
+
+def _send_vtuber_status(text: str):
+    """Send status text to VTuber overlay via A2F WS bridge."""
+    try:
+        data = json.dumps({"text": text}).encode()
+        req = urllib.request.Request(
+            "http://localhost:9871/status",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=1)
+    except Exception:
+        pass
 
 # Import necessary types from agent outputs
 from ..agent.output_types import SentenceOutput, AudioOutput
@@ -67,6 +83,7 @@ async def process_single_conversation(
         input_text = await process_user_input(
             user_input, context.asr_engine, locked_websocket_send
         )
+        t_asr_done = time.perf_counter()
 
         # Create batch input
         batch_input = create_batch_input(
@@ -96,13 +113,30 @@ async def process_single_conversation(
 
         try:
             # agent.chat yields Union[SentenceOutput, Dict[str, Any]]
+            t_llm_start = time.perf_counter()
+            _send_vtuber_status("🤔 생각 중...")
             agent_output_stream = context.agent_engine.chat(batch_input)
+            _is_first_token = True
 
             async for output_item in agent_output_stream:
+                if _is_first_token:
+                    t_first_token = time.perf_counter()
+                    logger.info(f'⏱ ASR→LLM: {(t_llm_start-t_asr_done)*1000:.0f}ms | TTFT: {(t_first_token-t_llm_start)*1000:.0f}ms | Total(ASR→1st token): {(t_first_token-t_asr_done)*1000:.0f}ms')
+                    _send_vtuber_status("")
+                    _is_first_token = False
+
                 if (
                     isinstance(output_item, dict)
                     and output_item.get("type") == "tool_call_status"
                 ):
+                    # Show tool status on VTuber overlay
+                    _tool_name = output_item.get("tool_name", "")
+                    _tool_status = output_item.get("status", "")
+                    if _tool_name and _tool_status == "started":
+                        _send_vtuber_status(f"🔧 {_tool_name}")
+                    elif _tool_status == "completed":
+                        _send_vtuber_status("")
+
                     # Detect stay_silent tool call
                     if (
                         output_item.get("tool_name") == "stay_silent"

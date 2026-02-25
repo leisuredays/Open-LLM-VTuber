@@ -15,6 +15,16 @@
 			"Id": "ParamMouthForm",
 			"Value": -1,
 			"Blend": "Add"
+		},
+		{
+			"Id": "Param7",
+			"Value": 0,
+			"Blend": "Override"
+		},
+		{
+			"Id": "Param8",
+			"Value": 0,
+			"Blend": "Override"
 		}
 	]
 }

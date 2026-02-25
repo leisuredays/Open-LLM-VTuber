@@ -1,78 +1,65 @@
-# ignore the user configuration file
-conf.yaml
 
-# ignore non-default background images
+api_keys.py
+asset
+avatars/*
 /backgrounds/*
 !/backgrounds/README.md
-
+*.bak
+# but all of the defaults are already tracked, so no need to un-ignore them
+cache/*
+# Cache and models
+/characters/*
+!/characters/README.md
+chat_history/
+.conda
+conda
+conf.yaml
+conf.yaml.backup
+# Database files
+.DS_Store
+.env
+*.exe
+.idea
+# ignore avatars
+# ignore non-default background images
+# ignore non-default character configs
 # ignore non-default live2d models
+# ignore the user configuration file
+knowledge_base/
+lab.py
+legacy/
+# Legacy and specific directories
 /live2d-models/*
 !/live2d-models/mao_pro
 !/live2d-models/shizuku
-
-# ignore non-default character configs
-/characters/*
-!/characters/README.md
-# but all of the defaults are already tracked, so no need to un-ignore them
-
-# ignore avatars
-avatars/*
-
+logs/*
+# Logs
 # macOS system files
-.DS_Store
-
-# Python files
-__pycache__/
-*.pyc
-lab.py
-.idea
-
-# Virtual environment
-.venv
-.conda
-conda
-
-# Sensitive data
-.env
-api_keys.py
-src/open_llm_vtuber/llm/user_credentials.json
-
-# Database files
+mcp_servers.json
+mem.json
 memory.db
 memory.db.bk
-
-# Logs
-server.log
-logs/*
-
-# Cache and models
-cache/*
-src/open_llm_vtuber/tts/asset
-src/open_llm_vtuber/tts/config
-src/open_llm_vtuber/asr/models*
-!src/open_llm_vtuber/asr/models/silero_vad.onnx
-asset
+# memory log
 models/*
 !models/piper_voice
 models/piper_voice/*
-
-
-# Legacy and specific directories
-legacy/
-chat_history/
-knowledge_base/
-submodules/MeloTTS
 openapi_assistants.json
 openapi_memgpt.json
-
-# memory log
-mem.json
-conf.yaml.backup
-
-*.exe
-
-tmp/
+Open-LLM-VTuber-Web/
 private/
-mcp_servers.json
-
-.vscode/
+*.pyc
+__pycache__/
+# Python files
+# Sensitive data
+server.log
+src/open_llm_vtuber/asr/models*
+!src/open_llm_vtuber/asr/models/silero_vad.onnx
+src/open_llm_vtuber/llm/user_credentials.json
+src/open_llm_vtuber/tts/asset
+src/open_llm_vtuber/tts/config
+submodules/MeloTTS
+tmp/
+.venv
+# Virtual environment
+.vscode/venv/
+vtuber_server.log

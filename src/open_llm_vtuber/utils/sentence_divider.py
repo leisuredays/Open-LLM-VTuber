@@ -45,6 +45,53 @@ ABBREVIATIONS = [
     "Dr.",
 ]
 
+# Patterns where punctuation should NOT be treated as sentence-ending.
+# Each entry is a compiled regex that matches a "false positive" sentence boundary.
+# Add new patterns here as needed — they will be automatically applied.
+_FALSE_BREAK_PATTERNS: list[re.Pattern] = [
+    re.compile(r"\d\.\d"),          # decimal numbers: 1.5, 3.0, 0.76
+    re.compile(r"\d\.\d+%"),        # percentages: 99.9%
+    re.compile(r"v?\d+\.\d+\.\d+"),  # version numbers: v2.3.1, 10.13.0, 2.3.1
+    re.compile(r"v\d+\.\d+"),        # version numbers: v2.3, v10.13
+    re.compile(r"[A-Za-z]\.[A-Za-z]\."),  # initials/acronyms: U.S., A.I.
+    re.compile(r"[A-Za-z0-9_]\.[a-zA-Z]{1,4}(?=\s|$|[^a-zA-Z])"),  # file extensions: .py, .json, .html
+]
+
+# Pattern for "ambiguous dot" — dot at end of buffer where next token might make
+# it a decimal/version. If buffer ends with digit+dot, we should wait for more input.
+_AMBIGUOUS_DOT_PATTERN = re.compile(r"\d\.$")
+
+PLACEHOLDER_CHAR = "\x00"  # null byte, won't appear in normal text
+
+
+def _mask_false_breaks(text: str) -> tuple[str, list[tuple[int, str]]]:
+    """Replace false-positive sentence breaks with a placeholder to protect them
+    from the regex splitter. Returns (masked_text, [(position, original)]). """
+    replacements = []
+    masked = text
+    for pattern in _FALSE_BREAK_PATTERNS:
+        for m in pattern.finditer(text):
+            match_text = m.group()
+            for i, ch in enumerate(match_text):
+                if ch == ".":
+                    pos = m.start() + i
+                    if pos < len(masked) and masked[pos] == ".":
+                        replacements.append((pos, "."))
+                        masked = masked[:pos] + PLACEHOLDER_CHAR + masked[pos + 1:]
+    return masked, replacements
+
+
+def _unmask_false_breaks(text: str) -> str:
+    """Restore placeholders back to original dots."""
+    return text.replace(PLACEHOLDER_CHAR, ".")
+
+
+def _has_ambiguous_dot_at_end(text: str) -> bool:
+    """Check if text ends with digit+dot — meaning the next token could be a digit
+    making it a decimal number (e.g. '3.' might become '3.0'). In streaming mode,
+    we should wait for more input before deciding this is a sentence break."""
+    return bool(_AMBIGUOUS_DOT_PATTERN.search(text))
+
 # Set of languages directly supported by pysbd
 SUPPORTED_LANGUAGES = {
     "am",
@@ -86,12 +133,15 @@ def detect_language(text: str) -> str:
         return None
 
 
-def is_complete_sentence(text: str) -> bool:
+def is_complete_sentence(text: str, streaming: bool = True) -> bool:
     """
     Check if text ends with sentence-ending punctuation and not abbreviation.
+    Ignores false-positive breaks (decimals, versions, etc.).
+    In streaming mode, trailing digit+dot is NOT treated as sentence end.
 
     Args:
         text: Text to check
+        streaming: If True, treat trailing digit+dot as ambiguous
 
     Returns:
         bool: Whether the text is a complete sentence
@@ -103,7 +153,13 @@ def is_complete_sentence(text: str) -> bool:
     if any(text.endswith(abbrev) for abbrev in ABBREVIATIONS):
         return False
 
-    return any(text.endswith(punct) for punct in END_PUNCTUATIONS)
+    # In streaming mode, digit+dot at end is ambiguous — not a complete sentence
+    if streaming and _has_ambiguous_dot_at_end(text):
+        return False
+
+    # Mask false breaks, then check if it still ends with punctuation
+    masked, _ = _mask_false_breaks(text)
+    return any(masked.endswith(punct) for punct in END_PUNCTUATIONS)
 
 
 def contains_comma(text: str) -> bool:
@@ -157,23 +213,31 @@ def has_punctuation(text: str) -> bool:
     return False
 
 
-def contains_end_punctuation(text: str) -> bool:
+def contains_end_punctuation(text: str, streaming: bool = True) -> bool:
     """
     Check if text contains any sentence-ending punctuation.
+    Ignores false-positive breaks (decimals, versions, etc.).
+    In streaming mode, also ignores ambiguous trailing dots (digit+dot at end).
 
     Args:
         text: Text to check
+        streaming: If True, treat trailing digit+dot as ambiguous (wait for more)
 
     Returns:
         bool: Whether the text contains ending punctuation
     """
-    return any(punct in text for punct in END_PUNCTUATIONS)
+    masked, _ = _mask_false_breaks(text)
+    # In streaming mode, if the text ends with digit+dot, mask that too
+    if streaming and _has_ambiguous_dot_at_end(masked):
+        masked = masked[:-1] + PLACEHOLDER_CHAR
+    return any(punct in masked for punct in END_PUNCTUATIONS)
 
 
 def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
     """
     Segment text into complete sentences using regex pattern matching.
     More efficient but less accurate than pysbd.
+    Uses _FALSE_BREAK_PATTERNS to protect decimal numbers, versions, etc.
 
     Args:
         text: Text to segment into sentences
@@ -184,8 +248,11 @@ def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
     if not text:
         return [], ""
 
+    # Mask dots that are NOT sentence boundaries (decimals, versions, etc.)
+    masked_text, _ = _mask_false_breaks(text)
+
     complete_sentences = []
-    remaining_text = text.strip()
+    remaining_text = masked_text.strip()
 
     # Create pattern for matching sentences ending with any end punctuation
     escaped_punctuations = [re.escape(p) for p in END_PUNCTUATIONS]
@@ -204,10 +271,12 @@ def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
             remaining_text = remaining_text[end_pos:].lstrip()
             continue
 
-        complete_sentences.append(potential_sentence)
+        # Unmask before appending
+        complete_sentences.append(_unmask_false_breaks(potential_sentence))
         remaining_text = remaining_text[end_pos:].lstrip()
 
-    return complete_sentences, remaining_text
+    # Unmask remaining text
+    return complete_sentences, _unmask_false_breaks(remaining_text)
 
 
 def segment_text_by_pysbd(text: str) -> Tuple[List[str], str]:

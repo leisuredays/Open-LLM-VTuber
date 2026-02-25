@@ -172,6 +172,15 @@ character_config:
         model: 'llama-3.3-70b-versatile' # 使用的模型
         temperature: 1.0 # 温度，介于 0 到 2 之间
 
+      # OpenClaw Gateway API 配置
+      openclaw_llm:
+        base_url: 'http://127.0.0.1:18789/v1' # Gateway 기본 URL
+        llm_api_key: 'your OpenClaw gateway token' # Gateway 인증 토큰
+        model: 'openclaw:main' # 에이전트 식별자, 예: 'openclaw:main' 또는 'agent:main'
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+        agent_id: '' # 선택사항: x-openclaw-agent-id 헤더로 전송할 에이전트 ID
+        session_key: '' # 선택사항: 대화 유지를 위한 세션 키
+
   # === 自动语音识别 ===
   asr_config:
     # 语音转文本模型选项：'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr'

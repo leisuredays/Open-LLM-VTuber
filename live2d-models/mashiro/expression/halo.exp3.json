@@ -3,8 +3,8 @@
 	"Parameters": [
 		{
 			"Id": "Param7",
-			"Value": 1,
-			"Blend": "Add"
+			"Value": 0,
+			"Blend": "Override"
 		}
 	]
 }

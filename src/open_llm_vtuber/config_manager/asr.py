@@ -181,6 +181,20 @@ class GroqWhisperASRConfig(I18nMixin):
     }
 
 
+class GoogleCloudASRConfig(I18nMixin):
+    """Configuration for Google Cloud Speech-to-Text."""
+
+    api_key: str = Field(..., alias="api_key")
+    language: str = Field("ko-KR", alias="language")
+    model: str = Field("latest_short", alias="model")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "api_key": Description(en="Google Cloud API key", zh="Google Cloud API 密钥"),
+        "language": Description(en="Language code (e.g. ko-KR, en-US)", zh="语言代码"),
+        "model": Description(en="Recognition model (latest_short, latest_long, etc.)", zh="识别模型"),
+    }
+
+
 class SherpaOnnxASRConfig(I18nMixin):
     """Configuration for Sherpa Onnx ASR."""
 
@@ -304,6 +318,7 @@ class ASRConfig(I18nMixin):
         "fun_asr",
         "groq_whisper_asr",
         "sherpa_onnx_asr",
+        "google_cloud_asr",
     ] = Field(..., alias="asr_model")
     azure_asr: Optional[AzureASRConfig] = Field(None, alias="azure_asr")
     faster_whisper: Optional[FasterWhisperConfig] = Field(None, alias="faster_whisper")
@@ -315,6 +330,9 @@ class ASRConfig(I18nMixin):
     )
     sherpa_onnx_asr: Optional[SherpaOnnxASRConfig] = Field(
         None, alias="sherpa_onnx_asr"
+    )
+    google_cloud_asr: Optional[GoogleCloudASRConfig] = Field(
+        None, alias="google_cloud_asr"
     )
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
@@ -335,6 +353,9 @@ class ASRConfig(I18nMixin):
         ),
         "sherpa_onnx_asr": Description(
             en="Configuration for Sherpa Onnx ASR", zh="Sherpa Onnx ASR 配置"
+        ),
+        "google_cloud_asr": Description(
+            en="Configuration for Google Cloud STT", zh="Google Cloud STT 配置"
         ),
     }
 

@@ -102,19 +102,20 @@ class AsyncLLM(StatelessLLMInterface):
             available_tools = tools if self.support_tools else NOT_GIVEN
             max_tokens_param = self.max_tokens if self.max_tokens else NOT_GIVEN
 
-            extra_body_param = self.extra_body if self.extra_body else NOT_GIVEN
-
-            stream: AsyncStream[
-                ChatCompletionChunk
-            ] = await self.client.chat.completions.create(
+            create_params = dict(
                 messages=messages_with_system,
                 model=self.model,
                 stream=True,
                 temperature=self.temperature,
                 tools=available_tools,
                 max_tokens=max_tokens_param,
-                extra_body=extra_body_param,
             )
+            if self.extra_body:
+                create_params["extra_body"] = self.extra_body
+
+            stream: AsyncStream[
+                ChatCompletionChunk
+            ] = await self.client.chat.completions.create(**create_params)
             logger.debug(
                 f"Tool Support: {self.support_tools}, Available tools: {available_tools}"
             )

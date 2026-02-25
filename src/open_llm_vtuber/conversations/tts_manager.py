@@ -149,7 +149,14 @@ class TTSTaskManager:
         """Process TTS generation and queue the result for ordered delivery"""
         audio_file_path = None
         try:
-            audio_file_path = await self._generate_audio(tts_engine, tts_text)
+            # Resolve emotion name from actions for TTS reference selection
+            emotion = None
+            if actions and actions.expressions and live2d_model:
+                for emo_name, emo_idx in live2d_model.emo_map.items():
+                    if emo_idx == actions.expressions[0]:
+                        emotion = emo_name
+                        break
+            audio_file_path = await self._generate_audio(tts_engine, tts_text, emotion=emotion)
             payload = prepare_audio_payload(
                 audio_path=audio_file_path,
                 display_text=display_text,
@@ -173,13 +180,19 @@ class TTSTaskManager:
                 tts_engine.remove_file(audio_file_path)
                 logger.debug("Audio cache file cleaned.")
 
-    async def _generate_audio(self, tts_engine: TTSInterface, text: str) -> str:
+    async def _generate_audio(self, tts_engine: TTSInterface, text: str, emotion: str = None) -> str:
         """Generate audio file from text"""
         logger.debug(f"🏃Generating audio for '''{text}'''...")
-        return await tts_engine.async_generate_audio(
+        import time
+        t_tts_start = time.perf_counter()
+        result = await tts_engine.async_generate_audio(
             text=text,
             file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",
+            emotion=emotion,
         )
+        t_tts_done = time.perf_counter()
+        logger.info(f'⏱ TTS 합성: {(t_tts_done-t_tts_start)*1000:.0f}ms')
+        return result
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""

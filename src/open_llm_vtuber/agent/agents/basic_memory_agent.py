@@ -305,11 +305,11 @@ class BasicMemoryAgent(AgentInterface):
                 f"{self._current_rag_context}"
             )
         # 핵심 규칙 리마인더 (recency effect 활용)
-        system += (
-            "\n\n# 리마인더\n"
-            "위 배경 지식보다 캐릭터 성격과 말투 규칙이 항상 우선합니다. "
-            "캐릭터를 벗어나는 응답은 절대 하지 마세요."
-        )
+        # system += (
+        #     "\n\n# 리마인더\n"
+        #     "위 배경 지식보다 캐릭터 성격과 말투 규칙이 항상 우선합니다. "
+        #     "캐릭터를 벗어나는 응답은 절대 하지 마세요."
+        # )
         return system
 
     def _add_message(

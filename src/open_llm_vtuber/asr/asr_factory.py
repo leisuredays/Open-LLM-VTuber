@@ -54,6 +54,14 @@ class ASRFactory:
                 model=kwargs.get("model"),
                 lang=kwargs.get("lang"),
             )
+        elif system_name == "google_cloud_asr":
+            from .google_cloud_asr import VoiceRecognition as GoogleCloudASR
+
+            return GoogleCloudASR(
+                api_key=kwargs.get("api_key", ""),
+                language=kwargs.get("language", "ko-KR"),
+                model=kwargs.get("model", "latest_short"),
+            )
         elif system_name == "sherpa_onnx_asr":
             from .sherpa_onnx_asr import VoiceRecognition as SherpaOnnxASR
 

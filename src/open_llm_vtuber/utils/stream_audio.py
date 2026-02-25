@@ -1,4 +1,6 @@
 import base64
+import json
+import os
 from pydub import AudioSegment
 from pydub.utils import make_chunks
 from ..agent.output_types import Actions
@@ -69,6 +71,29 @@ def prepare_audio_payload(
     audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
     volumes = _get_volume_by_chunks(audio, chunk_length_ms)
 
+    # Read A2F sidecar frames if available
+    # Params excluded from A2F → let idle motion control them instead
+    _A2F_EXCLUDED_PARAMS = {"ParamEyeBallX", "ParamEyeBallY"}
+
+    a2f_frames = None
+    a2f_fps = 30
+    if audio_path:
+        sidecar_path = audio_path + ".a2f.json"
+        try:
+            if os.path.exists(sidecar_path):
+                with open(sidecar_path, "r") as f:
+                    a2f_data = json.load(f)
+                a2f_frames = a2f_data.get("frames")
+                a2f_fps = a2f_data.get("fps", 30)
+                if a2f_frames:
+                    for frame in a2f_frames:
+                        if "params" in frame:
+                            for key in _A2F_EXCLUDED_PARAMS:
+                                frame["params"].pop(key, None)
+                os.unlink(sidecar_path)
+        except Exception:
+            pass
+
     payload = {
         "type": "audio",
         "audio": audio_base64,
@@ -77,6 +102,8 @@ def prepare_audio_payload(
         "display_text": display_text,
         "actions": actions.to_dict() if actions else None,
         "forwarded": forwarded,
+        "a2f_frames": a2f_frames,
+        "a2f_fps": a2f_fps,
     }
 
     return payload

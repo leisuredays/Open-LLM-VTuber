@@ -28,6 +28,7 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "groq_llm",
         "mistral_llm",
         "dify_llm",
+        "openclaw_llm",
     ] = Field(..., alias="llm_provider")
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")

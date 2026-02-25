@@ -10,6 +10,7 @@ from .stateless_llm.openai_compatible_llm import AsyncLLM as OpenAICompatibleLLM
 from .stateless_llm.ollama_llm import OllamaLLM
 from .stateless_llm.claude_llm import AsyncLLM as ClaudeLLM
 from .stateless_llm.dify_llm import DifyLLM
+from .stateless_llm.openclaw_llm import OpenClawLLM
 
 
 class LLMFactory:
@@ -92,6 +93,18 @@ class LLMFactory:
                 ),
                 image_variable=kwargs.get("image_variable", ""),
                 image_upload_method=kwargs.get("image_upload_method", "direct"),
+            )
+        elif llm_provider == "openclaw_llm":
+            return OpenClawLLM(
+                model=kwargs.get("model"),
+                base_url=kwargs.get("base_url"),
+                llm_api_key=kwargs.get("llm_api_key"),
+                organization_id=kwargs.get("organization_id"),
+                project_id=kwargs.get("project_id"),
+                temperature=kwargs.get("temperature"),
+                max_tokens=kwargs.get("max_tokens"),
+                agent_id=kwargs.get("agent_id", ""),
+                session_key=kwargs.get("session_key", ""),
             )
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}")

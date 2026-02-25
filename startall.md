@@ -26,3 +26,7 @@ python scripts/run_discord_live.py
 frontend
 cd /home/leisuredays/Open-LLM-VTuber/Open-LLM-VTuber-Web
 npm run dev:web
+
+키오스크 모드 
+cd ~/Open-LLM-VTuber
+sudo ./start_kiosk.sh

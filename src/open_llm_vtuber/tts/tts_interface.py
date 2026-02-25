@@ -6,7 +6,7 @@ from loguru import logger
 
 
 class TTSInterface(metaclass=abc.ABCMeta):
-    async def async_generate_audio(self, text: str, file_name_no_ext=None) -> str:
+    async def async_generate_audio(self, text: str, file_name_no_ext=None, emotion: str = None) -> str:
         """
         Asynchronously generate speech audio file using TTS.
 
@@ -22,10 +22,31 @@ class TTSInterface(metaclass=abc.ABCMeta):
         str: the path to the generated audio file
 
         """
-        return await asyncio.to_thread(self.generate_audio, text, file_name_no_ext)
+        return await asyncio.to_thread(self.generate_audio, text, file_name_no_ext, emotion)
+
+    async def async_generate_audio_streaming(self, text: str, emotion: str = None):
+        """
+        Asynchronously generate speech audio in streaming mode.
+        
+        Yields tuples of (audio_chunk_bytes, a2f_frames_so_far, metadata).
+        
+        By default, this is not implemented. Subclasses should override this
+        method to provide streaming support.
+        
+        Args:
+            text: Text to synthesize
+            emotion: Optional emotion for reference selection
+            
+        Yields:
+            (audio_chunk_bytes, a2f_frames_so_far, metadata_dict)
+        """
+        raise NotImplementedError("Streaming TTS not supported by this engine")
+        # This makes the method an async generator that yields nothing
+        # Subclasses should override with actual implementation
+        yield  # pragma: no cover
 
     @abc.abstractmethod
-    def generate_audio(self, text: str, file_name_no_ext=None) -> str:
+    def generate_audio(self, text: str, file_name_no_ext=None, emotion: str = None) -> str:
         """
         Generate speech audio file using TTS.
         text: str

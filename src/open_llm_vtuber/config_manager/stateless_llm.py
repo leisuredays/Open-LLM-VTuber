@@ -193,6 +193,47 @@ class GroqConfig(OpenAICompatibleConfig):
     )
 
 
+class OpenClawConfig(OpenAICompatibleConfig):
+    """Configuration for OpenClaw API."""
+
+    base_url: str = Field("http://127.0.0.1:18789/v1", alias="base_url")
+    model: str = Field("openclaw:main", alias="model")
+    llm_api_key: str = Field("default_api_key", alias="llm_api_key")
+    agent_id: str = Field("", alias="agent_id")
+    session_key: str = Field("", alias="session_key")
+    interrupt_method: Literal["system", "user"] = Field(
+        "system", alias="interrupt_method"
+    )
+
+    _OPENCLAW_DESCRIPTIONS: ClassVar[dict[str, Description]] = {
+        "base_url": Description(
+            en="Base URL for OpenClaw Gateway (e.g., http://127.0.0.1:18789/v1)",
+            zh="OpenClaw Gateway 基础 URL (例如: http://127.0.0.1:18789/v1)",
+        ),
+        "llm_api_key": Description(
+            en="Gateway token for authentication (OPENCLAW_GATEWAY_TOKEN)",
+            zh="Gateway 인증 토큰 (OPENCLAW_GATEWAY_TOKEN)",
+        ),
+        "model": Description(
+            en="Agent model identifier (e.g., 'openclaw:main')",
+            zh="에이전트 모델 식별자 (예: 'openclaw:main')",
+        ),
+        "agent_id": Description(
+            en="OpenClaw agent ID sent via x-openclaw-agent-id header (optional, overrides model field)",
+            zh="x-openclaw-agent-id 헤더로 전송할 에이전트 ID (선택사항, model 필드 대신 사용)",
+        ),
+        "session_key": Description(
+            en="OpenClaw session key sent via x-openclaw-session-key header (optional, for session persistence)",
+            zh="x-openclaw-session-key 헤더로 전송할 세션 키 (선택사항, 세션 유지용)",
+        ),
+    }
+
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
+        **OpenAICompatibleConfig.DESCRIPTIONS,
+        **_OPENCLAW_DESCRIPTIONS,
+    }
+
+
 class ClaudeConfig(StatelessLLMBaseConfig):
     """Configuration for OpenAI Official API."""
 
@@ -332,6 +373,7 @@ class StatelessLLMConfigs(I18nMixin, BaseModel):
     llama_cpp_llm: LlamaCppConfig | None = Field(None, alias="llama_cpp_llm")
     mistral_llm: MistralConfig | None = Field(None, alias="mistral_llm")
     dify_llm: DifyConfig | None = Field(None, alias="dify_llm")
+    openclaw_llm: OpenClawConfig | None = Field(None, alias="openclaw_llm")
 
     DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "stateless_llm_with_template": Description(
@@ -367,5 +409,9 @@ class StatelessLLMConfigs(I18nMixin, BaseModel):
         ),
         "dify_llm": Description(
             en="Configuration for Dify Chat API", zh="Dify Chat API 配置"
+        ),
+        "openclaw_llm": Description(
+            en="Configuration for OpenClaw Gateway API",
+            zh="OpenClaw Gateway API 配置",
         ),
     }

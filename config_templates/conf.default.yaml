@@ -60,7 +60,7 @@ character_config:
         # examples: 
         # 'openai_compatible_llm', 'llama_cpp_llm', 'claude_llm', 'ollama_llm'
         # 'openai_llm', 'gemini_llm', 'zhipu_llm', 'deepseek_llm', 'groq_llm'
-        # 'mistral_llm', 'lmstudio_llm', and more
+        # 'mistral_llm', 'lmstudio_llm', 'openclaw_llm', and more
         llm_provider: 'ollama_llm'
         # let ai speak as soon as the first comma is received on the first sentence
         # to reduced latency.
@@ -172,6 +172,15 @@ character_config:
         llm_api_key: 'your groq API key'
         model: 'llama-3.3-70b-versatile'
         temperature: 1.0 # value between 0 to 2
+
+      # OpenClaw Gateway API Configuration
+      openclaw_llm:
+        base_url: 'http://127.0.0.1:18789/v1'
+        llm_api_key: 'your OpenClaw gateway token'
+        model: 'openclaw:main' # agent identifier, e.g. 'openclaw:main' or 'agent:main'
+        temperature: 1.0 # value between 0 to 2
+        agent_id: '' # optional: agent ID sent via x-openclaw-agent-id header
+        session_key: '' # optional: session key for conversation persistence
 
   # === Automatic Speech Recognition ===
   asr_config:

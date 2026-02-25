@@ -81,9 +81,7 @@ class CharacterConfig(I18nMixin):
     @field_validator("persona_prompt")
     def check_default_persona_prompt(cls, v):
         if not v:
-            raise ValueError(
-                "Persona_prompt cannot be empty. Please provide a persona prompt."
-            )
+            return ""
         # Try loading from prompts/persona/{v}.txt if such a file exists
         try:
             content = prompt_loader.load_persona(v.strip())
