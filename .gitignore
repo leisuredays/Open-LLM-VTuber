@@ -63,3 +63,4 @@ tmp/
 # Virtual environment
 .vscode/venv/
 vtuber_server.log
+venv/
