@@ -1,0 +1,82 @@
+system_config:
+  conf_version: 'v1.2.1'
+  host: '0.0.0.0'       # 브라우저/다른 기기 접근 허용
+  port: 12393
+  config_alts_dir: 'characters'
+  tool_prompts:
+    live2d_expression_prompt: 'live2d_expression_prompt'
+    group_conversation_prompt: 'group_conversation_prompt'
+    mcp_prompt: 'mcp_prompt'
+    proactive_speak_prompt: 'proactive_speak_prompt'
+
+character_config:
+  conf_name: 'yuzuha'
+  conf_uid: 'yuzuha_001'
+  live2d_model_name: 'mao_pro'  # 실제 Live2D 모델로 변경 필요
+  character_name: 'Yuzuha'
+  avatar: ''
+  human_name: 'Human'
+
+  persona_prompt: |
+    당신은 유즈하입니다. 친근하고 밝은 성격의 VTuber입니다.
+    항상 한국어로 대화하며, 귀엽고 활발한 말투를 사용합니다.
+
+  agent_config:
+    conversation_agent_choice: 'basic_memory_agent'
+
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'claude_llm'
+        faster_first_response: true
+        segment_method: 'pysbd'
+        use_mcpp: false
+
+    llm_configs:
+      claude_llm:
+        base_url: 'https://api.anthropic.com'
+        llm_api_key: 'YOUR_CLAUDE_API_KEY'
+        model: 'claude-haiku-4-5-20251001'
+
+      ollama_llm:
+        base_url: 'http://localhost:11434/v1'
+        model: 'qwen2.5:latest'
+        temperature: 1.0
+        keep_alive: -1
+        unload_at_exit: true
+
+  asr_config:
+    asr_model: 'faster_whisper'
+
+    faster_whisper:
+      model_path: 'large-v3-turbo'
+      download_root: 'models/whisper'
+      language: 'ko'
+      device: 'auto'
+      compute_type: 'int8'
+      prompt: ''
+
+    sherpa_onnx_asr:
+      model_type: 'sense_voice'
+      sense_voice: './models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx'
+      tokens: './models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt'
+      num_threads: 4
+      use_itn: false
+      provider: 'cpu'
+
+  tts_config:
+    tts_model: 'gpt_sovits_tts'
+
+    gpt_sovits_tts:
+      api_url: 'http://192.168.0.3:9880/tts'
+      text_lang: 'ko'
+      # ref_audio_path는 TTS 서버(Windows)가 읽는 경로 → Windows 절대경로 사용
+      ref_audio_path: 'C:\Users\leisu\vtuber_v2\tts\yuzuha_reference.wav'
+      prompt_lang: 'ko'
+      prompt_text: ''
+      text_split_method: 'cut0'    # 한국어 짧은 문장 안정성
+      batch_size: 1                # 정수 필수
+      media_type: 'wav'
+      streaming_mode: 0            # 정수 필수
+
+    edge_tts:
+      voice: 'ko-KR-SunHiNeural'

@@ -73,3 +73,13 @@ target-version = "py310"
 [tool.ruff.lint]
 # Ignore E402 (module level import not at top of file) for live platform runner scripts
 per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"], "scripts/run_discord_live.py" = ["E402"] }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }
+]

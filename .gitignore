@@ -13,7 +13,7 @@ cache/*
 chat_history/
 .conda
 conda
-conf.yaml
+# conf.yaml tracked in fork
 conf.yaml.backup
 # Database files
 .DS_Store
